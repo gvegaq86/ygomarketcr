@@ -2,6 +2,8 @@ import requests
 from woocommerce import API
 from helper.tyt_utils import TYTUtils
 from helper.utils import send_mail
+import sys
+sys.stdout.flush()
 
 wcapi = API(
     url="https://ygomarketcr.com",
