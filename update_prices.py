@@ -10,6 +10,8 @@ wcapi = API(
     version="wc/v3",
     timeout=60
 )
+send_mail("ygomarketcr@gmail.com", "gvegaq86@gmail.com", "Actualizacion ygomarketcr", "test2")
+
 print("nuevos cambios 2")
 products = []
 messages = []
