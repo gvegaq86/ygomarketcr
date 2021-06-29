@@ -26,39 +26,48 @@ def get_images(set_code, edition, condition):
     else:
         return False
 
-
-get_images("MAGO-EN006", " 1st Edition", "NM")
-
 # Give the location of the file
-loc = ("C:\YgoPriceApi\YugiPriceFinder\InventarioSegunda.xlsx")
+loc = ("C:\ygomarketcr\inventory2.xlsx")
 from openpyxl import load_workbook
 
 wb = load_workbook(loc)
-ws = wb['Sheet1']
+ws = wb['inventory2']
 ws['A1'] = 'A1'
 
 rows = int(ws.max_row)
 
 for i in range(0, rows-1):
-    n = ws[i + 2][2].value
-    code = n.split( )[0]
-    imagenes = ws[i + 2][5].value
-    codigo = ws[i + 2][0].value
-    edition =ws[i + 2][7].value
-    condition = ws[i + 2][8].value
+    n = ws[i + 2][3].value
+    imagenes = ws[i + 2][29].value
+    codigo = ws[i + 2][40].value
+    rareza = ws[i + 2][52].value
+    edition = ws[i + 2][44].value
+    #ws[i + 2][48].value = codigo.split("-")[0]
+    condition = ws[i + 2][56].value
+    #ws[i + 2][3].value = f"{codigo} {n} - {edition} - {condition} - {rareza}"
+    ws[i + 2][29].value = f"https://ygomarketcr.com/wp-content/uploads/2021/07/{codigo}-{edition.replace(' ', '-')}-{condition}.jpg"
+    wb.save(loc)
+
     item_found = False
 
-    if code is not None:
-        for file_name in os.listdir('C:\YgoPriceApi\YugiPriceFinder\card_images'):
+    if codigo is not None:
+        for file_name in os.listdir('C:\ygomarketcr\card_images'):
             s = file_name
             a = file_name.split("-")
             code2 = f'{a[0]}-{a[1]}'
             expansion = code2.split("-")[0]
-            edition2 = a[2]
-            print(a)
-            condition2 = a[3].replace(".jpg", "")
 
-            if code == code2 and edition == edition2 and condition == condition2:
+            if a[2] == "1st":
+                edition2 = "1st Edition"
+            elif a[2] == "Limited":
+                edition2 = "Limited Edition"
+            else:
+                edition2 = "Unlimited"
+
+            print(a)
+            condition2 = a[-1].replace(".jpg", "")
+
+            if codigo == code2 and edition == edition2 and condition == condition2:
                 item_found = True
                 break
 
@@ -69,8 +78,8 @@ for i in range(0, rows-1):
             if condition == None:
                 condition = ""
 
-            a = get_images(set_code=code, edition=edition, condition=condition)
+            a = get_images(set_code=codigo, edition=edition, condition=condition)
             if a:
-               print(f"Imagen Descargada para el codigo {code}")
+               print(f"Imagen Descargada para el codigo {codigo}")
             else:
-                print(f"Imagen NO fue descargada para el codigo {code}")
+                print(f"Imagen NO fue descargada para el codigo {codigo}")

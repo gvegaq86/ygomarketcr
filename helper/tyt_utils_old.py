@@ -25,7 +25,7 @@ class TYTUtils:
                 search_words = f'{card_key}+{edition.replace(" ", "+")}'
 
             if condition == 'HP' or condition == 'MP' or condition == 'D':
-                c = 'P'
+                c = 'PL'
             else:
                 c = condition
 
@@ -112,8 +112,7 @@ class TYTUtils:
                         card1 = CardInfo(card_name=card_name, card_key=set_code, condition=c,
                                          price=p, pricec=pc, edition=edition_, rarity=rarity, quantity=quantity,
                                          expansion=expansion, image=image, web_site='T&T')
-                        if seller == "TrollAndToad Com":
-                            card_list.append(card1.get_dict_card_info())
+                        card_list.append(card1.get_dict_card_info())
                         break
             else:
                 # print(f'La carta "{set_code}" {edition} {condition} "NO" tiene stock en T&T!')

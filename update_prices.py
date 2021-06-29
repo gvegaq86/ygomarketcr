@@ -12,9 +12,7 @@ wcapi = API(
     version="wc/v3",
     timeout=60
 )
-send_mail("ygomarketcr@gmail.com", "gvegaq86@gmail.com", "Actualizacion ygomarketcr", "test3")
 
-print("nuevos cambios 2")
 products = []
 messages = []
 i = 1
@@ -54,17 +52,25 @@ for product in products:
                 data = {
                     "regular_price": rounded_price
                 }
-                message = f"Se va a actualizar {codigo}, condicion: {condicion}, edicion: {edicion}, rareza: {rareza}, " \
-                          f"precio anterior: {current_price}, precio nuevo: {rounded_price}"
-                print(message)
+                print(f"Se va a actualizar {codigo}, condicion: {condicion}, edicion: {edicion}, rareza: {rareza}, " \
+                          f"precio_anterior: {current_price}, precio_nuevo: {rounded_price}")
+
+                message = {"codigo": codigo, "condicion": condicion, "edicion": edicion, "rareza": rareza,
+                           "precio_anterior": current_price, "precio_actualizado": rounded_price,
+                           "diferencia": int(current_price) - int(rounded_price)}
+
                 messages.append(message)
                 wcapi.put(f"products/{product['id']}", data).json()
 
 message = ""
+messages.sort(key=lambda x: x.get("diferencia"), reverse=True)
 for m in messages:
-    print(m)
-    message += m + "\n"
+    a = f"Se actualizó la carta {m['codigo']}, condicion: {m['condicion']}, edicion: {m['edicion']}, rareza: {m['rareza']}, " \
+                          f"precio anterior: {m['precio_anterior']}, precio actualizado: {m['precio_actualizado']}," \
+        f" diferencia: {m['diferencia']}"
+    print(a)
+    message += a + "\n"
 
 if message:
-    send_mail("ygomarketcr@gmail.com", "gvegaq86@gmail.com", "Actualizacion ygomarketcr", message)
+    send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com", "juangamboa16201@gmail.com"], "Actualizacion de precios - YgoMarketCR", message)
 
