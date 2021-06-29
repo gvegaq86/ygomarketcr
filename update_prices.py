@@ -11,7 +11,6 @@ wcapi = API(
 )
 products = []
 messages = []
-
 i = 1
 while True:
     items = wcapi.get("products", params={"per_page": 100, "page": i}).json()
