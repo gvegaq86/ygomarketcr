@@ -10,7 +10,7 @@ wcapi = API(
     version="wc/v3",
     timeout=60
 )
-print("nuevos cambios")
+print("nuevos cambios 2")
 products = []
 messages = []
 i = 1
