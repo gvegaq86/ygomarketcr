@@ -40,3 +40,4 @@ webdriver-manager==3.2.1
 websockets==8.1
 Werkzeug==2.0.1
 WooCommerce==3.0.0
+yagmail==0.14.256

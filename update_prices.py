@@ -1,6 +1,7 @@
 import requests
 from woocommerce import API
 from helper.tyt_utils import TYTUtils
+from helper.utils import send_mail
 
 wcapi = API(
     url="https://ygomarketcr.com",
@@ -9,6 +10,7 @@ wcapi = API(
     version="wc/v3",
     timeout=60
 )
+print("nuevos cambios")
 products = []
 messages = []
 i = 1
@@ -54,5 +56,11 @@ for product in products:
                 messages.append(message)
                 wcapi.put(f"products/{product['id']}", data).json()
 
+message = ""
 for m in messages:
     print(m)
+    message += m + "\n"
+
+if message:
+    send_mail("ygomarketcr@gmail.com", "gvegaq86@gmail.com", "Actualizacion ygomarketcr", message)
+
