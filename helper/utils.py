@@ -363,3 +363,9 @@ class Utils:
         except Exception as e:
             print(f'TCGP - Occurred the following error trying to get card sets from name: {e}')
             raise Exception(e)
+
+
+def send_mail(FROM, TO, SUBJECT, TEXT, SERVER):
+    import yagmail
+    yag = yagmail.SMTP(FROM, 'Cyberdragon78%')
+    yag.send(TO, SUBJECT, TEXT)
