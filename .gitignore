@@ -1,0 +1,5 @@
+/venv/
+*.pyc
+/api/chrome-data/
+/api/geckodriver.log
+.idea/*
