@@ -107,7 +107,6 @@ class TYTUtils:
                         pc = f'{self.colones_sign}{format(float(p) * self.exchange_rate, ",.0f")}'
                         seller = item.find_all("div", class_="col-3 text-center p-1")[0].next_element.attrs["title"]
 
-
                         quantity = int(item.find_all("option")[len(item.find_all("option")) - 1].attrs['value'])
                         card1 = CardInfo(card_name=card_name, card_key=set_code, condition=c,
                                          price=p, pricec=pc, edition=edition_, rarity=rarity, quantity=quantity,

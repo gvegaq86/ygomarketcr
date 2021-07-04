@@ -1,25 +1,23 @@
 from time import sleep
-
 import requests
 from bs4 import BeautifulSoup
 from models.card_info import CardInfo
-from helper.utils import Utils
+from helper.utils import Utils, send_mail
 
 utils = Utils()
 
 
 class TYTUtils:
-    def __init__(self, exchange_rate):
-        self.exchange_rate = exchange_rate
+    def __init__(self):
+        self.exchange_rate = requests.get("https://tipodecambio.paginasweb.cr/api").json()
         self.colones_sign = 'CR'
-        self.aa=1
+        self.aa = 1
 
-    def get_card_info(self, card_key, edition, condition, rarity=None, hide_oos=False):
+    def get_html_card_info(self, card_key, edition, condition, rarity=None, hide_oos=False, counter=0):
         try:
-            print(f'T&T - Get card Info: {card_key}')
             base_url = 'https://www.trollandtoad.com'
 
-            search_words = f'{card_key}+{edition.replace(" ", "+")}+{rarity.replace(" ","+")}'
+            search_words = f'{card_key}+{edition.replace(" ", "+")}+{rarity.replace(" ", "+")}'.replace("++", "+")
 
             if condition == 'HP' or condition == 'MP' or condition == 'D' or condition == 'LP':
                 c = 'PL'
@@ -43,24 +41,106 @@ class TYTUtils:
             html = requests.get(url=url).text
             parsed_html = BeautifulSoup(html, 'html.parser')
             if 'Sorry, you have exceeded your' in parsed_html.text:
-               cards = "exceeded"
+                cards = "exceeded"
             else:
                 cards = parsed_html.find_all("div", class_="card h-100 p-3")
 
-            #print(f'T&T - cards: {cards}')
-            return cards
+            # print(f'T&T - cards: {cards}')
+            if cards:
+                return cards
+            elif counter == 0:
+                return self.get_html_card_info(card_key=card_key, edition="", condition=condition, rarity=rarity,
+                                               hide_oos=hide_oos, counter=1)
+            else:
+                return []
 
         except Exception as e:
             print(f'TYT - Occurred the following error trying to get card info: {e}')
             raise Exception(e)
 
-    def get_prices(self, set_code, edition, condition, language, rarity=None, hide_oos=False):
+    def get_rounded_price(self, price):
+        rounded_price = round(float(price.replace("$", "")) * self.exchange_rate["venta"] / 500.0) * 500
+        return str("500" if rounded_price == 0 else rounded_price)
+
+    def get_ref_link(self, codigo):
+        tcgp_link = ""
+        card_info = utils.get_card_info_from_set_code(codigo)
+        if card_info:
+            rarity = card_info["set_rarity"]
+            rarity = rarity.replace(" ", "%20") if rarity != "Common" else "Common%20%2F%20Short%20Print"
+            tcgp_link = f'https://www.tcgplayer.com/search/yugioh/product?Language=English&q={card_info["name"].replace(" ", "%20")}&productLineName=yugioh&view=grid&page=1&RarityName={rarity}'
+        return tcgp_link
+
+    def send_results(self, found_card_list, oos_card_list, not_found_card_list):
+        found_card_results = ""
+        oos_card_results = ""
+        not_found_card_results = ""
+        full_results_message = ""
+
+        found_card_list.sort(key=lambda x: abs(x.get("diferencia")), reverse=True)
+        oos_card_list.sort(key=lambda x: abs(x.get("diferencia")), reverse=True)
+
+        if found_card_list:
+            for m in found_card_list:
+                a = f"Se actualizó {m['codigo']}, {m['condicion']}, {m['edicion']}, {m['rareza']}, " \
+                    f"precio anterior: {m['precio_anterior']}, precio actualizado: {m['precio_actualizado']}," \
+                    f" diferencia: {m['diferencia']}" + \
+                    (" ***NO T&T***" if m["seller"] != "TrollAndToad Com" else "")
+                print(a)
+                found_card_results += a + "\n"
+
+        else:
+            print("No cards to update")
+
+        a = ""
+        for m in oos_card_list:
+            # tcgp_link = self.get_ref_link(m['codigo'])
+            tcgp_link = None
+
+            a = f"{m['codigo']}, {m['condicion']}, {m['edicion']}, {m['rareza']}, " \
+                f"precio de la pagina: {m['precio_anterior']}, precio T&T OOS: {m['precio_actualizado']}," \
+                f" diferencia: {m['diferencia']}" + (f"\n tcgp: {tcgp_link}" if tcgp_link else "")
+            print(a)
+            oos_card_results += a + "\n"
+
+        a = ""
+        for m in not_found_card_list:
+            # tcgp_link = self.get_ref_link(m['codigo'])
+            tcgp_link = None
+
+            a = f"{m['codigo']}, {m['condicion']}, {m['edicion']}, {m['rareza']}, " \
+                f"precio_tienda: {m['precio_tienda']}" + (f"\n tcgp: {tcgp_link}" if tcgp_link else "")
+            print(a)
+            not_found_card_results += a + "\n"
+
+        if found_card_results:
+            full_results_message += f"Precios actualizados (Encontrados en T&T y con stock:) ({len(found_card_list)} cartas)" + "\n"
+            full_results_message += found_card_results + "\n" + "\n"
+
+        if oos_card_results:
+            full_results_message += f"Cartas pendientes de actualizar manualmente (Sin stock en T&T) ({len(oos_card_list)} cartas)" + "\n"
+            full_results_message += oos_card_results + "\n" + "\n"
+
+        if not_found_card_results:
+            full_results_message += f"Cartas pendientes de actualizar manualmente (No se encuentra en T&T del todo) ({len(not_found_card_list)} cartas)" + "\n"
+            full_results_message += not_found_card_results + "\n" + "\n"
+
+        if full_results_message:
+            # send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com"],
+            send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com", "juangamboa16201@gmail.com"],
+                      "Resumen de Precios a actualizar - YgoMarketCR", full_results_message)
+
+    def get_card_info(self, set_code, edition, condition, language="English", rarity=None, hide_oos=False):
         try:
             print(f'T&T - Getting prices from set code: {set_code}')
             # Get card info
-            cards = self.get_card_info(card_key=set_code, edition=edition, condition=condition, rarity=rarity,
-                                       hide_oos=hide_oos)
+
+            cards = self.get_html_card_info(card_key=set_code, edition=edition, condition=condition, rarity=rarity,
+                                            hide_oos=hide_oos)
+            seller = ""
             card_list = []
+            oos_card_list = []
+            not_found_card_list = []
 
             if len(cards) > 0 and 'exceeded' not in str(cards):
                 for card in cards:
@@ -83,34 +163,76 @@ class TYTUtils:
                             else:
                                 displayed_condition = "LP"
 
-                            displayed_rarity = card_text.replace(displayed_edition, "").replace(set_code, "").split(" - ")[-1].strip()
+                            displayed_rarity = \
+                                card_text.replace(displayed_edition, "").replace(set_code, "").split(" - ")[-1]. \
+                                    replace("-", "").strip()
 
-                            p = float(item.contents[3].next.replace("$", ""))
+                            quantity = int(item.contents[2].text)
+                            displayed_code = card_text.replace(rarity, "").replace(edition, "").replace("- ", "")
+
+                            p = float(item.contents[3].next.replace("$", "").replace(",", ""))
                             seller = item.contents[0].contents[0].attrs["title"]
-                            card1 = CardInfo(card_name=card_name, card_key=set_code, condition=displayed_condition,
+                            card1 = CardInfo(card_name=card_name, card_key=displayed_code,
+                                             condition=displayed_condition,
                                              price=p, pricec="0", edition=displayed_edition, rarity=rarity, quantity=1,
-                                             expansion="", image="", web_site='T&T')
-                            if seller == "TrollAndToad Com" and condition == displayed_condition and \
-                                    displayed_edition == edition and displayed_rarity == rarity:
-                                card_list.append(card1.get_dict_card_info())
-                                break
-            else:
-                # print(f'La carta "{set_code}" {edition} {condition} "NO" tiene stock en T&T!')
+                                             expansion="", image="", web_site='T&T', seller=seller)
+                            # if seller not in ("Teppi", "PokeOrder") and condition == displayed_condition and \
+                            if seller not in ("Teppi", "PokeOrder", "Godsarena") and displayed_edition in (
+                                    ["Limited Edition", "Unlimited"] if edition in ["Limited Edition",
+                                                                                    "Unlimited"] else edition) and \
+                                    displayed_rarity == rarity and set_code in displayed_code:
+                                if quantity > 0:
+                                    card_list.append(card1.get_dict_card_info())
+                                else:
+                                    oos_card_list.append(card1.get_dict_card_info())
 
+            elif 'exceeded' in str(cards):
                 if 'exceeded' in str(cards) and self.aa == 1:
                     print("Waiting 180 seconds")
                     sleep(180)
                     self.aa = 2
-                    card_list = self.get_prices(set_code=set_code, edition=edition, condition=condition, language=language, rarity=rarity)
+                    card_list, oos_card_list, not_found_card_list = self.get_card_info(set_code=set_code,
+                                                                                       edition=edition,
+                                                                                       condition=condition,
+                                                                                       language=language, rarity=rarity)
 
                 elif self.aa == 1:
                     self.aa = 0
-                    card_list = self.get_prices(set_code=set_code, edition="", condition="", language=language, rarity=rarity)
+                    card_list, oos_card_list, not_found_card_list = self.get_card_info(set_code=set_code, edition="",
+                                                                                       condition="", language=language,
+                                                                                       rarity=rarity)
 
                 self.aa = 1
 
-            print(f'Card list: {card_list}')
-            return card_list
+            if not card_list and not oos_card_list:
+                card1 = CardInfo(card_name="", card_key=set_code, condition=condition, price=0, pricec="0",
+                                 edition=edition, rarity=rarity, quantity=0, expansion="", image="", web_site='T&T',
+                                 seller=seller)
+                not_found_card_list.append(card1)
+
+            # If there are results
+            if len(card_list) > 1:
+                # If there are more than 2 conditions of the same item and the condition card is LP
+                conditions = []
+                [conditions.append(x["condition"]) if x["condition"] not in conditions else None for x in card_list]
+                if condition == "LP" and len(conditions) > 1:
+                    # sorted(card_list, key=lambda x: float(x["price"].replace("$", " ")))
+                    lp_lowest_price_item = sorted(list(filter(lambda x: x["condition"] == condition, card_list)), key=lambda x:float(x["price"].replace("$", "")))[0]
+                    nm_lowest_price_item = sorted(list(filter(lambda x: x["condition"] == "NM", card_list)), key=lambda x:float(x["price"].replace("$", "")))[0]
+
+                    if float(lp_lowest_price_item["price"].replace("$", "")) >= \
+                            float(nm_lowest_price_item["price"].replace("$", "")):
+                        card_list = [nm_lowest_price_item]
+                    else:
+                        card_list = [lp_lowest_price_item]
+                else:
+                    card_list = sorted(list(filter(lambda x: x["condition"] == condition, card_list)),
+                                       key=lambda x:float(x["price"].replace("$", "")))
+            else:
+                card_list = sorted(list(filter(lambda x: x["condition"] == condition, card_list)),
+                                   key=lambda x: float(x["price"].replace("$", "")))
+
+            return card_list, oos_card_list, not_found_card_list
         except Exception as e:
             print(f'TYT - Occurred the following error trying to get prices: {e}')
             # raise Exception(e)

@@ -9,8 +9,8 @@ utils = Utils()
 
 
 class TCGPlayerUtils:
-    def __init__(self, exchange_rate):
-        self.exchange_rate = exchange_rate
+    def __init__(self):
+        self.exchange_rate = requests.get("https://tipodecambio.paginasweb.cr/api").json()
         self.colones_sign = 'CR'
 
     def get_items(self, set_code, card_name, edition="", condition="", image="", expansion="", rarity="",product_id=""):
@@ -28,9 +28,13 @@ class TCGPlayerUtils:
                     f"filterValue={condition.replace(' ', '')}"
 
             parsed_html = utils.get_parsed_html(url2)
-            total_items = int(parsed_html.find_all("span", "sort-toolbar__total-item-count")[0].text.split(" ")[-2])
+            text = parsed_html.find_all("span", "sort-toolbar__total-item-count")[0].text
+            if text == "No Results":
+                total_items = []
+            else:
+                total_items = int(text.split(" ")[-2])
 
-            for page in range(5, math.ceil(total_items / 10) + 1):
+            for page in range(1, math.ceil(total_items / 10) + 1):
                 if page > 5:
                     url = f"https://shop.tcgplayer.com/productcatalog/product/changepricetablepage?" \
                           f"productId={product_id}" \
@@ -53,9 +57,8 @@ class TCGPlayerUtils:
 
                     edition_ = utils.get_edition(item.find_all('a', class_='condition')[0].text)
                     condition_ = utils.get_condition(item.find_all('a', class_='condition')[0].text)
-                    price = float(item.find_all('span', class_='product-listing__price')[0].text
-                                  .replace('$', '').replace(',', ''))
-                    pc = f'{self.colones_sign}{format(float(price) * self.exchange_rate, ",.0f")}'
+                    price = float(item.find_all('span', class_='product-listing__price')[0].text.replace('$', '').replace(',', ''))
+                    pc = f'{self.colones_sign}{format(float(price) * self.exchange_rate["venta"], ",.0f")}'
                     quantity = len(item.find_all('select', id='quantityToBuy')[0].find_all('option'))
 
                     card1 = CardInfo(card_name=card_name, card_key=set_code, condition=condition_,
@@ -67,7 +70,7 @@ class TCGPlayerUtils:
                             continue
 
                     if condition:
-                        if condition != condition_:
+                        if condition != (condition_).upper():
                             continue
 
                     card_list.append(card1.get_dict_card_info())
@@ -81,7 +84,7 @@ class TCGPlayerUtils:
     def get_card_info_from_set_code(self, set_code):
         try:
             print(f'Getting card info from set code: {set_code}')
-            url = f'https://db.ygoprodeck.com/api/v6/cardsetsinfo.php?setcode={set_code}'
+            url = f'https://db.ygoprodeck.com/api/v7/cardsetsinfo.php?setcode={set_code}'
             results = requests.get(url=url)
             card_info = json.loads(results.content)
 
@@ -175,6 +178,7 @@ class TCGPlayerUtils:
                 else:
                     print(f'La carta "{set_code}" {edition} {condition} "NO" tiene stock en TCGPlayer!')
             print(f'Card list: {card_list}')
+            card_list.sort(key=lambda x: float(x["price"].replace("$", "")))
             return card_list
         except Exception as e:
             print(f'TCGPlayer - Occurred the following error trying to get prices: {e}')

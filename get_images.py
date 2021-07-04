@@ -27,12 +27,11 @@ def get_images(set_code, edition, condition):
         return False
 
 # Give the location of the file
-loc = ("C:\ygomarketcr\inventory2.xlsx")
+loc = ("C:\ygomarketcr\inven.xlsx")
 from openpyxl import load_workbook
 
 wb = load_workbook(loc)
-ws = wb['inventory2']
-ws['A1'] = 'A1'
+ws = wb['Inventario']
 
 rows = int(ws.max_row)
 
@@ -42,15 +41,13 @@ for i in range(0, rows-1):
     codigo = ws[i + 2][40].value
     rareza = ws[i + 2][52].value
     edition = ws[i + 2][44].value
-    #ws[i + 2][48].value = codigo.split("-")[0]
+    # ws[i + 2][48].value = codigo.split("-")[0]
     condition = ws[i + 2][56].value
-    #ws[i + 2][3].value = f"{codigo} {n} - {edition} - {condition} - {rareza}"
+    # ws[i + 2][3].value = f"{codigo} {n} - {edition} - {condition} - {rareza}"
     ws[i + 2][29].value = f"https://ygomarketcr.com/wp-content/uploads/2021/07/{codigo}-{edition.replace(' ', '-')}-{condition}.jpg"
-    wb.save(loc)
-
     item_found = False
 
-    if codigo is not None:
+    if False and codigo is not None:
         for file_name in os.listdir('C:\ygomarketcr\card_images'):
             s = file_name
             a = file_name.split("-")
@@ -82,4 +79,7 @@ for i in range(0, rows-1):
             if a:
                print(f"Imagen Descargada para el codigo {codigo}")
             else:
-                print(f"Imagen NO fue descargada para el codigo {codigo}")
+                print(f"Imagen NO fue descargada para el codigo \n {codigo}-{edition}-{condition}")
+                pass
+wb.save(loc)
+

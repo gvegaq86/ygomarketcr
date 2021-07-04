@@ -1,76 +1,81 @@
-import requests
-from woocommerce import API
+from helper.tcgplayer_utils import TCGPlayerUtils
 from helper.tyt_utils import TYTUtils
-from helper.utils import send_mail
 import sys
+
+from helper.utils import Utils
+from helper.wcapi_utils import WCAPIUtils
+
 sys.stdout.flush()
+wcapi = WCAPIUtils()
+found_card_list = []
+oos_card_list = []
+not_found_card_list = []
+utils = Utils()
 
-wcapi = API(
-    url="https://ygomarketcr.com",
-    consumer_key="ck_b7254f31da371ea5c5c3641989e0591f0bb5ea0a",
-    consumer_secret="cs_f0634c862d71b393735fc4d440841edaa2132cd0",
-    version="wc/v3",
-    timeout=60
-)
+# Get All the Products
+products = wcapi.get_all_products()
+# products = [wcapi.get_products_by_id(id=7795     )]
+tyt = TYTUtils()
+tcgp = TCGPlayerUtils()
 
-products = []
-messages = []
-i = 1
-while True:
-    items = wcapi.get("products", params={"per_page": 100, "page": i}).json()
-    if items:
-        products.extend(items)
-        i += 1
-    else:
-        break
+# a = tcgp.get_prices(set_code="DUOV-EN014", edition="1st Edition", condition="Near Mint")
+# print(a)
+# Get Card Lists
 
-tipo_cambio = requests.get("https://tipodecambio.paginasweb.cr/api").json()
-tyt = TYTUtils(exchange_rate=tipo_cambio["venta"])
+# products.sort(key=lambda x: x["date_created"], reverse=True)
 
 for product in products:
     if product['stock_quantity'] and product['stock_quantity'] > 0:
-        rounded_price = 0
-        codigo = product["attributes"][0]["options"][0]
-        edicion = product["attributes"][1]["options"][0]
-        rareza = product["attributes"][3]["options"][0]
+        condition = product["attributes"][4]["options"][0].split(" ")[0]
 
-        try:
-            condicion = product["attributes"][4]["options"][0].split("(")[1].replace(")", "")
-        except:
-            condicion = product["attributes"][4]["options"][0]
-
-        if condicion in ("NM", "LP"):
+        if condition in ("NM", "LP"):
+            rounded_price = 0
+            code = product["attributes"][0]["options"][0]
+            edition = product["attributes"][1]["options"][0]
+            rarity = product["attributes"][3]["options"][0]
             current_price = product["regular_price"]
-            price = tyt.get_prices(set_code=codigo, edition=edicion, condition=condicion, language="English",
-                                   hide_oos=True, rarity=rareza)
+            card_found, oos_card, not_found_card = tyt.get_card_info(set_code=code, edition=edition,
+                                                                     condition=condition, hide_oos=False,
+                                                                     rarity=rarity)
+            if card_found:
+                rounded_price = tyt.get_rounded_price(card_found[0]["price"])
+                seller = card_found[0]["seller"]
 
-            if price:
-                rounded_price = str(round(float(price[0]["price"].replace("$", "")) * tipo_cambio["venta"] / 500.0) * 500)
-                rounded_price = ("500" if rounded_price == "0" else rounded_price)
+                if current_price != rounded_price:
+                    data = {
+                        "regular_price": rounded_price
+                    }
+                    differencia = int(rounded_price) - int(current_price)
+                    print(f"Se va a actualizar {code}, condicion: {condition}, edicion: {edition}, rareza: {rarity}, " \
+                          f"precio_anterior: {current_price}, precio_nuevo: {rounded_price}, "
+                          f"diferencia: {differencia}" +
+                          (" ***NO T&T***" if seller != "TrollAndToad Com" else ""))
 
-            if rounded_price and current_price != rounded_price:
-                data = {
-                    "regular_price": rounded_price
-                }
-                print(f"Se va a actualizar {codigo}, condicion: {condicion}, edicion: {edicion}, rareza: {rareza}, " \
-                          f"precio_anterior: {current_price}, precio_nuevo: {rounded_price}")
+                    message = {"codigo": code, "condicion": condition, "edicion": edition, "rareza": rarity,
+                               "precio_anterior": current_price, "precio_actualizado": rounded_price,
+                               "diferencia": differencia,  "seller": seller}
 
-                message = {"codigo": codigo, "condicion": condicion, "edicion": edicion, "rareza": rareza,
-                           "precio_anterior": current_price, "precio_actualizado": rounded_price,
-                           "diferencia": int(current_price) - int(rounded_price)}
+                    found_card_list.append(message)
+                    # wcapi.update_product(product["id"], data)
+                else:
+                    print("Current price matches with T&T")
+            elif oos_card:
+                seller = oos_card[0]["seller"]
 
-                messages.append(message)
-                wcapi.put(f"products/{product['id']}", data).json()
+                rounded_price = tyt.get_rounded_price(oos_card[0]["price"])
 
-message = ""
-messages.sort(key=lambda x: x.get("diferencia"), reverse=True)
-for m in messages:
-    a = f"Se actualizó la carta {m['codigo']}, condicion: {m['condicion']}, edicion: {m['edicion']}, rareza: {m['rareza']}, " \
-                          f"precio anterior: {m['precio_anterior']}, precio actualizado: {m['precio_actualizado']}," \
-        f" diferencia: {m['diferencia']}"
-    print(a)
-    message += a + "\n"
+                card = {"codigo": code, "condicion": oos_card[0]["condition"], "edicion": edition,
+                        "rareza": oos_card[0]["rarity"], "precio_anterior": current_price, "precio_actualizado":
+                            rounded_price, "diferencia": int(rounded_price) - int(current_price), "seller": seller}
 
-if message:
-    send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com", "juangamboa16201@gmail.com"], "Actualizacion de precios - YgoMarketCR", message)
+                oos_card_list.append(card)
+            elif not_found_card:
+                card = {"codigo": code, "condicion": not_found_card[0].condition,
+                        "edicion": not_found_card[0].edition,
+                        "rareza": not_found_card[0].rarity, "precio_tienda": current_price}
 
+                not_found_card_list.append(card)
+            print(f"{len(not_found_card_list) + len(oos_card_list) + len(found_card_list)} cards processed")
+
+# Send results by email
+tyt.send_results(found_card_list, oos_card_list, not_found_card_list)

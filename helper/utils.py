@@ -6,12 +6,16 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from requests_html import HTMLSession
 from bs4 import BeautifulSoup
-
+import yagmail
 from models.card_sets import CardSets
 from models.set import Set
+from difflib import SequenceMatcher
 
 
 class Utils:
+    def similar(self, a, b):
+        return SequenceMatcher(None, a, b).ratio()
+
     def get_condition(self, text):
         text = text.upper()
         condition = ''
@@ -49,6 +53,22 @@ class Utils:
             condition = 'Damaged'
 
         return condition
+
+    def get_card_info_from_set_code(self, set_code):
+        try:
+            print(f'Getting card info from set code: {set_code}')
+            url = f'https://db.ygoprodeck.com/api/v7/cardsetsinfo.php?setcode={set_code}'
+            results = requests.get(url=url)
+            card_info = json.loads(results.content)
+
+            if 'error' in str(card_info):
+                card_info = None
+
+            print(f'Card info: {card_info}')
+            return card_info
+        except Exception as e:
+            print(f'TCGP - Occurred the following error trying to get card info from set code: {e}')
+            raise Exception(e)
 
     def get_edition(self, text):
         text = text.upper()
@@ -366,6 +386,5 @@ class Utils:
 
 
 def send_mail(FROM, TO, SUBJECT, TEXT):
-    import yagmail
     yag = yagmail.SMTP(FROM, 'Cyberdragon78%')
     yag.send(TO, SUBJECT, TEXT)
