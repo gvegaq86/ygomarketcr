@@ -56,7 +56,7 @@ for product in products:
                                "diferencia": differencia,  "seller": seller}
 
                     found_card_list.append(message)
-                    # wcapi.update_product(product["id"], data)
+                    wcapi.update_product(product["id"], data)
                 else:
                     print("Current price matches with T&T")
             elif oos_card:
