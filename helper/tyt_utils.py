@@ -145,6 +145,7 @@ class TYTUtils:
             if len(cards) > 0 and 'exceeded' not in str(cards):
                 for card in cards:
                     card_text = card.find("a", "card-text").text
+                    card_image = card.find_all("img")[0]['data-src']
                     if set_code in card.text:
                         items = card.find_all("div", "row position-relative align-center py-2 m-auto")
                         for item in items:
@@ -175,9 +176,9 @@ class TYTUtils:
                             card1 = CardInfo(card_name=card_name, card_key=displayed_code,
                                              condition=displayed_condition,
                                              price=p, pricec="0", edition=displayed_edition, rarity=rarity, quantity=1,
-                                             expansion="", image="", web_site='T&T', seller=seller)
+                                             expansion="", image=card_image, web_site='T&T', seller=seller)
                             # if seller not in ("Teppi", "PokeOrder") and condition == displayed_condition and \
-                            if seller not in ("Teppi", "PokeOrder", "Godsarena") and displayed_edition in (
+                            if seller not in ("Teppi", "PokeOrder", "Godsarena", "Pandaxpress") and displayed_edition in (
                                     ["Limited Edition", "Unlimited"] if edition in ["Limited Edition",
                                                                                     "Unlimited"] else edition) and \
                                     displayed_rarity == rarity and set_code in displayed_code:
@@ -206,7 +207,7 @@ class TYTUtils:
 
             if not card_list and not oos_card_list:
                 card1 = CardInfo(card_name="", card_key=set_code, condition=condition, price=0, pricec="0",
-                                 edition=edition, rarity=rarity, quantity=0, expansion="", image="", web_site='T&T',
+                                 edition=edition, rarity=rarity, quantity=0, expansion="", image=card_image, web_site='T&T',
                                  seller=seller)
                 not_found_card_list.append(card1)
 
