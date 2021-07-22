@@ -141,6 +141,7 @@ class TYTUtils:
             card_list = []
             oos_card_list = []
             not_found_card_list = []
+            card_image = ""
 
             if len(cards) > 0 and 'exceeded' not in str(cards):
                 for card in cards:

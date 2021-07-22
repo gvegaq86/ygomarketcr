@@ -46,13 +46,28 @@ class WCAPIUtils:
     def get_product_by_filter(self, codigo, condition, edition, rarity):
         products = self.get_products_by_code_id(self.get_id_from_code(codigo))
         products = list(filter(lambda x: x['attributes'][1]['options'][0] == edition and
-                                         x['attributes'][4]['options'][0] == condition and
+                                         condition in x['attributes'][4]['options'][0] and
                                          x['attributes'][3]['options'][0] == rarity, products))
         return products[0] if products else None
 
     def get_products_by_code_id(self, id, page=1, per_page=100):
         return self.wcapi.get(f"products?attribute=pa_codigo&attribute_term={id}", params={"per_page": per_page,
                                                                                            "page": page}).json()
+
+    def get_rarity_terms(self, page=1, per_page=100):
+        results = self.wcapi.get(f"products/attributes/5/terms", params={"per_page": per_page, "page": page}).json()
+        results = sorted(results, key=lambda x: x["name"])
+        return [r["name"] for r in results]
+
+    def get_edition_terms(self, page=1, per_page=100):
+        results = self.wcapi.get(f"products/attributes/6/terms", params={"per_page": per_page, "page": page}).json()
+        results = sorted(results, key=lambda x: x["name"])
+        return [r["name"] for r in results]
+
+    def get_condition_terms(self, page=1, per_page=100):
+        results = self.wcapi.get(f"products/attributes/3/terms", params={"per_page": per_page, "page": page}).json()
+        results = sorted(results, key=lambda x: x["name"])
+        return list(set([r["name"].split(" ")[-1].replace("(", "").replace(")", "") for r in results]))
 
     def get_all_products(self):
         print("Getting all the products...")
@@ -70,6 +85,9 @@ class WCAPIUtils:
 
     def update_product(self, id, data):
         return self.wcapi.put(f"products/{id}", data).json()
+
+    def insert_product(self, data):
+        return self.wcapi.post(f"products", data).json()
 
     def get_products_by_id(self, id, page=1, per_page=100):
         return self.wcapi.get(f"products/{id}", params={"per_page": per_page, "page": page}).json()
