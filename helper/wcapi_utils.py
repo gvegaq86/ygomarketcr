@@ -1,5 +1,7 @@
+import os
 from multiprocessing.pool import ThreadPool
 
+import requests as requests
 from woocommerce import API
 
 
@@ -14,6 +16,9 @@ class WCAPIUtils:
             timeout=60
         )
         self.codes = self.get_all_codes()
+        self.base_url = "https://ygomarketcr.com"
+        self.wp_username = "gvegaq86@gmail.com"
+        self.wp_password = "yova69777"
 
     def get_products(self, page=1, per_page=100):
         return self.wcapi.get("products", params={"per_page": per_page, "page": page}).json()
@@ -69,6 +74,11 @@ class WCAPIUtils:
         results = sorted(results, key=lambda x: x["name"])
         return list(set([r["name"].split(" ")[-1].replace("(", "").replace(")", "") for r in results]))
 
+    def get_card_type_terms(self, page=1, per_page=100):
+        results = self.wcapi.get(f"products/attributes/8/terms", params={"per_page": per_page, "page": page}).json()
+        results = sorted(results, key=lambda x: x["name"])
+        return list(set([r["name"].split(" ")[-1].replace("(", "").replace(")", "") for r in results]))
+
     def get_all_products(self):
         print("Getting all the products...")
         products = []
@@ -83,11 +93,31 @@ class WCAPIUtils:
         print(f"{len(products)} products were found")
         return products
 
+    def upload_image(self, file_name):
+        end_point_url_img = f'{self.base_url}/wp-json/wp/v2/media'
+        headers = {'Content-Type': "image/jpeg", 'Content-Disposition': 'attachment; filename=%s'
+                                                                        % os.path.basename(file_name)}
+        post = {'caption': '', 'description': ''}
+
+        if "http" in file_name:
+            data = requests.get(file_name).content
+        else:
+            data = open(file_name, 'rb').read()
+
+        response = requests.post(url=end_point_url_img, data=data, headers=headers, json=post,
+                                 auth=(self.wp_username, self.wp_password))
+        response = response.json()
+        return response["source_url"]
+
     def update_product(self, id, data):
         return self.wcapi.put(f"products/{id}", data).json()
 
     def insert_product(self, data):
-        return self.wcapi.post(f"products", data).json()
+        response = self.wcapi.post(f"products", data).json()
+        if hasattr(response, "data") and response["data"]["status"] != 201:
+            raise Exception(response["message"])
+        else:
+            return response
 
     def get_products_by_id(self, id, page=1, per_page=100):
         return self.wcapi.get(f"products/{id}", params={"per_page": per_page, "page": page}).json()

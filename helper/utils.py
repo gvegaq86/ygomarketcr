@@ -41,7 +41,7 @@ class Utils:
         condition = condition.upper()
         if condition == 'NM':
             condition = 'Near Mint'
-        elif condition == 'LM':
+        elif condition == 'LP':
             condition = 'Lightly Played'
         elif condition == 'MP':
             condition = 'Moderately Played'
@@ -51,6 +51,23 @@ class Utils:
             condition = 'Heavily Played'
         elif condition == 'D':
             condition = 'Damaged'
+
+        return condition
+
+    def get_condition(self, condition):
+        condition = condition.upper()
+        if condition == 'NM':
+            condition = 'NM (Near Mint)'
+        elif condition == 'LP':
+            condition = 'LP (Lightly Played)'
+        elif condition == 'MP':
+            condition = 'MP (Moderately Played)'
+        elif condition == 'PL':
+            condition = 'PL (Played)'
+        elif condition == 'HP':
+            condition = 'HP (Heavily Played)'
+        elif condition == 'D':
+            condition = 'D (Damaged)'
 
         return condition
 
