@@ -112,6 +112,9 @@ class WCAPIUtils:
     def update_product(self, id, data):
         return self.wcapi.put(f"products/{id}", data).json()
 
+    def delete_product(self, id):
+        return self.wcapi.delete(f"products/{id}").json()
+
     def insert_product(self, data):
         response = self.wcapi.post(f"products", data).json()
         if hasattr(response, "data") and response["data"]["status"] != 201:

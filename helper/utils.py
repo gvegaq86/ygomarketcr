@@ -13,6 +13,20 @@ from difflib import SequenceMatcher
 
 
 class Utils:
+    def get_image_from_google(self, text):
+        api_key = "AIzaSyAz_k0dKF3ckMbweP8EWFKZm4Sydl6qAbw"
+        cx = "16d525520d0929aea"
+        response = requests.get(f"https://customsearch.googleapis.com/customsearch/v1?cx={cx}&searchType=image&"
+                                f"num=10&imgType=photo&q={text}&key={api_key}")
+        response = response.json()
+
+        items = list(filter(lambda x: text.split(" - ")[0] in x["title"] and text.split(" - ")[-2] in x["title"],
+                            response["items"]))
+
+        if not items:
+            items = list(filter(lambda x: text.split(" - ")[0] in x["title"], response["items"]))
+        return items[0]["link"]
+
     def similar(self, a, b):
         return SequenceMatcher(None, a, b).ratio()
 
@@ -157,7 +171,7 @@ class Utils:
             new_card_list.append(le)
 
         if new_card_list:
-            new_card_list = sorted(new_card_list, key=lambda k:(float(k['price'].replace('$', '').replace(',', ''))))
+            new_card_list = sorted(new_card_list, key=lambda k: (float(k['price'].replace('$', '').replace(',', ''))))
 
         return new_card_list
 
@@ -309,7 +323,7 @@ class Utils:
 
         if len(filtered_card_list) > 1:
             filtered_card_list = sorted(filtered_card_list,
-                                        key=lambda k:(float(k['price'].replace('$', '').replace(',', ''))))
+                                        key=lambda k: (float(k['price'].replace('$', '').replace(',', ''))))
 
         return {
             "card_key": card_key,
@@ -390,7 +404,7 @@ class Utils:
                                     sets.append(Set(set_name=s['set_name'],
                                                     set_code=s['set_code']).get_dict_sets())
 
-                        sets = sorted(sets, key=lambda k:(len(k['set_code']), k['set_code']))
+                        sets = sorted(sets, key=lambda k: (len(k['set_code']), k['set_code']))
                         card_sets.append(CardSets(card_name=card_set['name'],
                                                   image=card_set['card_images'][0]['image_url_small'],
                                                   sets=sets).get_dict_card_sets())

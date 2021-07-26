@@ -10,7 +10,6 @@ wcapi = WCAPIUtils()
 tyt = TYTUtils()
 utils = Utils()
 
-
 class Validator(QtGui.QValidator):
     def validate(self, string, pos):
         return QtGui.QValidator.Acceptable, string.upper(), pos
@@ -26,7 +25,7 @@ class MainApp(QMainWindow):
         condition_terms = wcapi.get_condition_terms()
         card_type_terms = wcapi.get_card_type_terms()
         self.image_path = ""
-        self.setFixedSize(620, 520)
+        self.setFixedSize(620, 420)
         self.setWindowTitle("YgoMarketCR")
 
         # Elementos
@@ -37,74 +36,88 @@ class MainApp(QMainWindow):
         self.card_code_label.setText("Codigo de carta")
         self.card_code = QLineEdit(self)
         self.card_code.setPlaceholderText("codigo")
-        self.card_code.setText("GFTP-EN038")
+        self.card_code.setValidator(Validator(self))
         self.card_code_label.setGeometry(10, 10, 100, 10)
         self.card_code.setGeometry(10, 30, 95, 30)
-        self.card_code.setValidator(Validator(self))
         self.card_code.setMaxLength(10)
+        self.card_code.textChanged.connect(self.update_name)
 
         # Image
         self.image.setGeometry(370, 10, 240, 350)
         self.image.setScaledContents(True)
         self.load_image = QPushButton("Cargar Imagen...", self)
         self.load_image.clicked.connect(self.slot_load_image)
-        self.load_image.setGeometry(420, 370, 130, 30)
+        self.load_image.setGeometry(330, 360, 130, 30)
+
+        # Image google
+        self.load_image_google = QPushButton("Buscar imagen en google", self)
+        self.load_image_google.clicked.connect(self.slot_load_image_from_google)
+        self.load_image_google.setGeometry(450, 360, 175, 30)
 
         # Condition
         self.condition_label = QLabel(self)
         self.condition_label.setText("Condicion")
         self.condition = QComboBox(self)
         self.condition.addItems(condition_terms)
-        self.condition_label.setGeometry(10, 50, 80, 40)
-        self.condition.setGeometry(5, 70, 100, 40)
+        self.condition_label.setGeometry(115, -5, 80, 40)
+        self.condition.setGeometry(110, 20, 100, 40)
+        self.condition.currentIndexChanged.connect(self.update_name)
 
         # Edition
         self.edition_label = QLabel(self)
         self.edition_label.setText("Edicion")
         self.edition = QComboBox(self)
         self.edition.addItems(edition_terms)
-        self.edition_label.setGeometry(10, 90, 130, 40)
-        self.edition.setGeometry(5, 110, 130, 40)
+        self.edition_label.setGeometry(215, -5, 130, 40)
+        self.edition.setGeometry(210, 20, 130, 40)
+        self.edition.currentIndexChanged.connect(self.update_name)
 
         # Rareza
         self.rarity_label = QLabel(self)
         self.rarity_label.setText("Rareza")
         self.rarity = QComboBox(self)
         self.rarity.addItems(rarity_terms)
-        self.rarity_label.setGeometry(10, 130, 130, 40)
-        self.rarity.setGeometry(5, 150, 180, 40)
+        self.rarity_label.setGeometry(10, 60, 130, 40)
+        self.rarity.setGeometry(5, 80, 180, 40)
+        self.rarity.currentIndexChanged.connect(self.update_name)
 
         # Boton buscar
         self.buscar = QPushButton("Buscar", self)
-        self.buscar.setGeometry(50, 190, 80, 40)
+        self.buscar.setGeometry(190, 80, 80, 40)
         self.buscar.clicked.connect(self.slot_load)
+
+        # Boton Limpiar
+        self.clear = QPushButton("Limpiar", self)
+        self.clear.setGeometry(260, 80, 80, 40)
+        self.clear.clicked.connect(self.slot_clear)
 
         # Info label
         self.info_label = QLabel(self)
         self.info_label.setText("Datos de la carta:")
-        self.info_label.setGeometry(10, 260, 180, 40)
+        self.info_label.setGeometry(10, 130, 180, 40)
 
         # Name of the card
         self.name_label = QLabel(self)
         self.name_label.setText("Nombre de la Carta")
         self.name = QLineEdit(self)
-        self.name_label.setGeometry(10, 290, 350, 40)
-        self.name.setGeometry(10, 320, 400, 30)
+        self.name_label.setGeometry(10, 160, 350, 40)
+        self.name.setGeometry(10, 165, 350, 25)
+        self.name.setPlaceholderText("Nombre de la carta")
 
         # Stock
         self.stock = QComboBox(self)
         self.stock_label = QLabel(self)
         self.stock_label.setText("Stock")
-        self.stock_label.setGeometry(10, 350, 80, 40)
-        self.stock.setGeometry(5, 380, 80, 30)
+        self.stock_label.setGeometry(10, 195, 80, 40)
+        self.stock.setGeometry(5, 225, 80, 30)
         self.stock.addItems([str(i) for i in range(0, 100)])
 
         # Prize
         self.prize = QLineEdit(self)
         self.prize_label = QLabel(self)
         self.prize_label.setText("Precio")
-        self.prize_label.setGeometry(100, 350, 80, 40)
-        self.prize.setGeometry(100, 380, 80, 30)
+        self.prize_label.setGeometry(100, 195, 80, 40)
+        self.prize.setGeometry(100, 225, 80, 25)
         self.prize.setText("0")
 
         # Tipo de Carta
@@ -112,22 +125,50 @@ class MainApp(QMainWindow):
         self.card_type_label.setText("Tipo de Carta")
         self.card_type = QComboBox(self)
         self.card_type.addItems(card_type_terms)
-        self.card_type_label.setGeometry(180, 350, 180, 40)
-        self.card_type.setGeometry(180, 370, 100, 40)
+        self.card_type_label.setGeometry(185, 195, 180, 40)
+        self.card_type.setGeometry(180, 220, 100, 40)
 
         # Message
         self.message = QLabel(self)
-        self.message.setGeometry(250, 430, 200, 40)
+        self.message.setGeometry(100, 350, 200, 40)
 
         # Botones de ingresar y actualizar
         self.insert_button = QPushButton("Ingresar", self)
         self.update_button = QPushButton("Actualizar", self)
-        self.insert_button.setGeometry(200, 470, 100, 50)
+        self.delete_button = QPushButton("Eliminar", self)
+        self.insert_button.setGeometry(10, 300, 100, 50)
         self.insert_button.clicked.connect(self.slot_insert)
-        self.update_button.setGeometry(300, 470, 100, 50)
+        self.update_button.setGeometry(110, 300, 100, 50)
         self.update_button.clicked.connect(self.slot_update)
+        self.delete_button.setGeometry(210, 300, 100, 50)
+        self.delete_button.clicked.connect(self.slot_delete)
+        self.clear_form()
+
+    def update_name(self, event):
+        self.name.setText(f"{self.card_code.text()} - {self.edition.currentText()} - "
+                          f"{self.condition.currentText()} - {self.rarity.currentText()}")
+
+    def display_dialog(self, message):
+        msg_box = QMessageBox()
+        msg_box.setText(message)
+        msg_box.exec_()
+
+    def clear_form(self):
+        self.card_code.clear()
+        self.condition.setCurrentText("NM")
+        self.edition.setCurrentText("1st Edition")
+        self.rarity.setCurrentText("Ultra Rare")
+        self.name.clear()
+        self.stock.setCurrentText("0")
+        self.prize.setText("0")
+        self.card_type.setCurrentText("Mounstruo")
         self.insert_button.setDisabled(True)
         self.update_button.setDisabled(True)
+        self.delete_button.setDisabled(True)
+        self.card_code.setFocus()
+        self.id = ""
+        self.image_path = ""
+        self.image.clear()
 
     def slot_update(self):
         data = {
@@ -136,7 +177,17 @@ class MainApp(QMainWindow):
             "regular_price": self.prize.text()
         }
 
+        if self.image_path:
+            image_url = wcapi.upload_image(self.image_path)
+            data["images"] = [{"src": image_url, "position": 0}]
+
         wcapi.update_product(id=self.id, data=data)
+        self.display_dialog(f"La carta '{self.name.text()}' ha sido actualizada correctamente.")
+
+    def slot_delete(self):
+        wcapi.delete_product(id=self.id)
+        self.display_dialog(f"La carta '{self.name.text()}' ha sido eliminada del inventario.")
+        self.clear_form()
 
     def slot_load_image(self):
         # Select an image
@@ -147,6 +198,16 @@ class MainApp(QMainWindow):
             self.image.setPixmap(QPixmap(image))
             self.image.show()
         self.image_path = file_name
+
+    def slot_load_image_from_google(self):
+        self.image_path = utils.get_image_from_google(self.name.text().replace(f" - {self.condition.currentText()}", ""))
+        if self.image_path:
+            image = QImage()
+            image.loadFromData(requests.get(self.image_path).content)
+            self.image.setPixmap(QPixmap(image))
+            self.image.show()
+
+        return self.image_path
 
     def slot_insert(self):
         image_url = (wcapi.upload_image(self.image_path) if self.image_path else "")
@@ -222,13 +283,23 @@ class MainApp(QMainWindow):
             "regular_price": self.prize.text()
         }
 
-        wcapi.insert_product(data=data)
+        response = wcapi.insert_product(data=data)
+        self.id = response["id"]
         self.insert_button.setDisabled(True)
         self.update_button.setDisabled(False)
+        self.delete_button.setDisabled(False)
         self.message.setText("")
         self.image_path = ""
+        self.display_dialog(f"La carta '{self.name.text()}' ha sido ingresada correctamente al inventario.")
+
+    def slot_clear(self):
+        self.clear_form()
 
     def slot_load(self):
+        if self.name.text() == "":
+            self.name.setText(f"{self.card_code.text()} - {self.edition.currentText()} - "
+                              f"{self.condition.currentText()} - {self.rarity.currentText()}")
+
         self.id = ""
         code = self.card_code.text()
         condition = self.condition.currentText()
@@ -249,6 +320,7 @@ class MainApp(QMainWindow):
             self.message.setText("Carta en Inventario")
             self.insert_button.setDisabled(True)
             self.update_button.setDisabled(False)
+            self.delete_button.setDisabled(False)
             self.id = product_from_inventory["id"]
             self.card_type.setCurrentText(product_from_inventory["attributes"][5]["options"][0])
         else:
@@ -260,30 +332,31 @@ class MainApp(QMainWindow):
                 image_url = info[0][0]["image"]
                 nombre = info[0][0]["card_name"]
                 self.stock.setCurrentText("0")
-                self.message.setText("Carta en T&T")
                 self.insert_button.setDisabled(False)
                 self.update_button.setDisabled(True)
-
+                self.image_path = image_url
+                self.card_type.setFocus()
+                self.display_dialog(f"La carta '{self.name.text()}' no existe en el inventario pero si en T&T.")
         if (info and info[0]) or product_from_inventory:
             if image_url:
                 image = QImage()
                 image.loadFromData(requests.get(image_url).content)
                 self.image.setPixmap(QPixmap(image))
                 self.image.show()
-                self.image_path = image_url
             else:
                 self.image.clear()
-
             self.name.setText(f"{code} {nombre} - {edition} - {condition} - {rarity}")
             self.prize.setText(precio)
         else:
-            self.message.setText("Carta no encontrada")
             self.stock.setCurrentText("0")
             self.name.setText(f"{code}  - {edition} - {condition} - {rarity}")
             self.prize.setText("0")
             self.image.clear()
+            self.slot_load_image_from_google()
             self.insert_button.setDisabled(False)
             self.update_button.setDisabled(True)
+            self.delete_button.setDisabled(True)
+            self.display_dialog(f"La carta '{self.name.text()}' no existe en el inventario ni en T&T.")
 
 
 if __name__ == "__main__":
