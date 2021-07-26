@@ -3,6 +3,7 @@ from multiprocessing.pool import ThreadPool
 
 import requests as requests
 from woocommerce import API
+from PIL import Image
 
 
 class WCAPIUtils:
@@ -16,6 +17,7 @@ class WCAPIUtils:
             timeout=60
         )
         self.codes = self.get_all_codes()
+        self.code_list = [c["name"] for c in self.codes]
         self.base_url = "https://ygomarketcr.com"
         self.wp_username = "gvegaq86@gmail.com"
         self.wp_password = "yova69777"
@@ -109,11 +111,18 @@ class WCAPIUtils:
         response = response.json()
         return response["source_url"]
 
+    def delete_image(self, id):
+        end_point_url_img = f'{self.base_url}/wp-json/wp/v2/media/{id}'
+
+        response = requests.delete(url=end_point_url_img, params={"force": True}, auth=(self.wp_username, self.wp_password))
+        response = response.json()
+        return response
+
     def update_product(self, id, data):
         return self.wcapi.put(f"products/{id}", data).json()
 
     def delete_product(self, id):
-        return self.wcapi.delete(f"products/{id}").json()
+        return self.wcapi.delete(f"products/{id}", params={"force": True}).json()
 
     def insert_product(self, data):
         response = self.wcapi.post(f"products", data).json()

@@ -14,18 +14,31 @@ from difflib import SequenceMatcher
 
 class Utils:
     def get_image_from_google(self, text):
-        api_key = "AIzaSyAz_k0dKF3ckMbweP8EWFKZm4Sydl6qAbw"
-        cx = "16d525520d0929aea"
-        response = requests.get(f"https://customsearch.googleapis.com/customsearch/v1?cx={cx}&searchType=image&"
-                                f"num=10&imgType=photo&q={text}&key={api_key}")
-        response = response.json()
+        try:
+            api_key = "AIzaSyAz_k0dKF3ckMbweP8EWFKZm4Sydl6qAbw"
+            response = requests.get(f"https://customsearch.googleapis.com/customsearch/v1?cx=16d525520d0929aea&"
+                                    f"searchType=image&num=10&imgSize=LARGE&imgType=photo&q={'YUGI ' + text}&key={api_key}",
+                                    timeout=20)
+            response = response.json()
+            card_code = text.split(" - ")[0].split(" ")[0]
+            condition = text.split(" - ")[-2]
 
-        items = list(filter(lambda x: text.split(" - ")[0] in x["title"] and text.split(" - ")[-2] in x["title"],
-                            response["items"]))
+            items = list(filter(lambda x: (card_code in x["title"] or card_code.replace("-", " ")
+                                           in x["title"]) and condition in x["title"],
+                                response["items"]))
 
-        if not items:
-            items = list(filter(lambda x: text.split(" - ")[0] in x["title"], response["items"]))
-        return items[0]["link"]
+            if not items and condition == "Unlimited":
+                items = list(filter(lambda x: (card_code in x["title"] or card_code.replace("-", " ")
+                                           in x["title"]) and
+                                              not any(word in x["title"].upper() for word in ['1ST EDITION',
+                                                                                              'LIMITED EDITION']),
+                                    response["items"]))
+            else:
+                items = list(filter(lambda x: (card_code in x["title"] or card_code.replace("-", " ")
+                                           in x["title"]), response["items"]))
+            return items
+        except:
+            return ""
 
     def similar(self, a, b):
         return SequenceMatcher(None, a, b).ratio()
