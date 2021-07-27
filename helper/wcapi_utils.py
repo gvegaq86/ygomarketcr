@@ -3,7 +3,6 @@ from multiprocessing.pool import ThreadPool
 
 import requests as requests
 from woocommerce import API
-from PIL import Image
 
 
 class WCAPIUtils:
@@ -80,6 +79,16 @@ class WCAPIUtils:
         results = self.wcapi.get(f"products/attributes/8/terms", params={"per_page": per_page, "page": page}).json()
         results = sorted(results, key=lambda x: x["name"])
         return list(set([r["name"].split(" ")[-1].replace("(", "").replace(")", "") for r in results]))
+
+    def get_categories_terms(self, page=1, per_page=100):
+        results = self.wcapi.get(f"products/categories/", params={"per_page": per_page, "page": page}).json()
+        results = sorted(results, key=lambda x: x["name"])
+        return results
+
+    def get_edit_tags_terms(self, page=1, per_page=100):
+        results = self.wcapi.get(f"products/tags/", params={"per_page": per_page, "page": page}).json()
+        results = sorted(results, key=lambda x: x["name"])
+        return results
 
     def get_all_products(self):
         print("Getting all the products...")

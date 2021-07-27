@@ -26,11 +26,15 @@ class MainApp(QMainWindow):
         edition_terms = wcapi.get_edition_terms()
         condition_terms = wcapi.get_condition_terms()
         card_type_terms = wcapi.get_card_type_terms()
+        self.categories_terms = wcapi.get_categories_terms()
+        self.edit_tags_terms = wcapi.get_edit_tags_terms()
         self.image_path = ""
         self.i = 1
         self.image_list = []
-        self.setFixedSize(620, 420)
+        self.setFixedSize(620, 500)
         self.setWindowTitle("YgoMarketCR")
+        self.selected_categories = []
+        self.selected_tags = []
 
         # Elementos
         self.image = QLabel(self)
@@ -149,25 +153,84 @@ class MainApp(QMainWindow):
         self.card_type_label.setGeometry(145, 220, 180, 40)
         self.card_type.setGeometry(140, 240, 100, 40)
 
-        # Message
-        self.message = QLabel(self)
-        self.message.setGeometry(100, 350, 200, 40)
+        # Categorias
+        self.categories_label = QLabel(self)
+        self.categories_label.setText("Categorias")
+        self.categories_label.setGeometry(30, 290, 100, 40)
+
+        self.frame = QFrame(self)
+        self.frame.setGeometry(30, 330, 100, 100)
+        self.avanzado = QCheckBox("Avanzado", self.frame)
+        self.avanzado.setChecked(True)
+
+        self.frame2 = QFrame(self)
+        self.frame2.setGeometry(30, 350, 100, 100)
+        self.old_school = QCheckBox("Old School", self.frame2)
+
+        self.frame3 = QFrame(self)
+        self.frame3.setGeometry(30, 370, 100, 100)
+        self.high_end = QCheckBox("High-End", self.frame3)
+
+        # Etiquetas
+        self.tag_label = QLabel(self)
+        self.tag_label.setText("Etiquetas")
+        self.tag_label.setGeometry(130, 290, 100, 40)
+
+        self.frame4 = QFrame(self)
+        self.frame4.setGeometry(130, 330, 100, 100)
+        self.goat = QCheckBox("goat", self.frame4)
+
+        self.frame5 = QFrame(self)
+        self.frame5.setGeometry(130, 350, 100, 100)
+        self.jck = QCheckBox("jck", self.frame5)
 
         # Botones de ingresar y actualizar
         self.insert_button = QPushButton("Ingresar", self)
         self.update_button = QPushButton("Actualizar", self)
         self.delete_button = QPushButton("Eliminar", self)
-        self.insert_button.setGeometry(10, 300, 100, 50)
+        self.insert_button.setGeometry(10, 420, 100, 50)
         self.insert_button.clicked.connect(self.slot_insert)
-        self.update_button.setGeometry(110, 300, 100, 50)
+        self.update_button.setGeometry(110, 420, 100, 50)
         self.update_button.clicked.connect(self.slot_update)
-        self.delete_button.setGeometry(210, 300, 100, 50)
+        self.delete_button.setGeometry(210, 420, 100, 50)
         self.delete_button.clicked.connect(self.slot_delete)
         self.clear_form()
 
     def update_card_code(self, event):
         self.card_name.setText("")
         self.update_name(event)
+
+    def check_checkboxes(self, options):
+        for o in options:
+            if o == "High-End":
+                self.high_end.setChecked(True)
+            if o == "Avanzado":
+                self.avanzado.setChecked(True)
+            if o == "Old School":
+                self.old_school.setChecked(True)
+            if o == "jck":
+                self.jck.setChecked(True)
+            if o == "goat":
+                self.goat.setChecked(True)
+
+    def get_category_list(self):
+        categories = []
+        if self.avanzado.checkState():
+            categories.append("Avanzado")
+        if self.high_end.checkState():
+            categories.append("High-End")
+        if self.old_school.checkState():
+            categories.append("Old School")
+        return categories
+
+    def get_tags_list(self):
+        tags = []
+        if self.jck.checkState():
+            tags.append("jck")
+        if self.goat.checkState():
+            tags.append("goat")
+        return tags
+
 
     def update_name(self, event):
         self.item_name.setText(f"{self.card_code.text()} {self.card_name.text()} - {self.edition.currentText()} - "
@@ -194,16 +257,41 @@ class MainApp(QMainWindow):
         self.id = ""
         self.image_path = ""
         self.image.clear()
+        self.avanzado.setChecked(False)
+        self.high_end.setChecked(False)
+        self.old_school.setChecked(False)
+        self.jck.setChecked(False)
+        self.goat.setChecked(False)
         self.item_name.setText(f"{self.card_code.text()} - {self.edition.currentText()} - "
                                f"{self.condition.currentText()} - {self.rarity.currentText()}")
 
     def slot_update(self):
         try:
+            tags = []
+            categories = []
+
+            selected_tags = self.get_tags_list()
+            selected_categories = self.get_category_list()
+
+            for tag in selected_tags:
+                t = list(filter(lambda x: x["name"] == tag, self.edit_tags_terms))[0]
+                tags.append({'id': t["id"], 'name': t["name"], 'slug': t["slug"]})
+
+            for cat in selected_categories:
+                t = list(filter(lambda x: x["name"] == cat, self.categories_terms))[0]
+                categories.append({'id': t["id"], 'name': t["name"], 'slug': t["slug"]})
+
             data = {
                 "name": self.item_name.text(),
                 "stock_quantity": self.stock.text(),
                 "regular_price": self.prize.text()
             }
+
+            if tags:
+                data["tags"] = tags
+
+            if categories:
+                data["categories"] = categories
 
             if self.image_path:
                 image_url = wcapi.upload_image(self.image_path)
@@ -274,9 +362,26 @@ class MainApp(QMainWindow):
 
     def slot_insert(self):
         try:
+            tags = []
+            categories = []
+
             image_url = self.image_path
             im = ([{"src": image_url, "position": 0}] if image_url else [])
+
+            selected_tags = self.get_tags_list()
+            selected_categories = self.get_category_list()
+
+            for tag in selected_tags:
+                t = list(filter(lambda x: x["name"] == tag, self.edit_tags_terms))[0]
+                tags.append({'id': t["id"], 'name': t["name"], 'slug': t["slug"]})
+
+            for cat in selected_categories:
+                t = list(filter(lambda x: x["name"] == cat, self.categories_terms))[0]
+                categories.append({'id': t["id"], 'name': t["name"], 'slug': t["slug"]})
+
             data = {
+                "tags": tags,
+                "categories": categories,
                 "images": im,
                 "attributes": [
                     {
@@ -351,7 +456,6 @@ class MainApp(QMainWindow):
             self.insert_button.setDisabled(True)
             self.update_button.setDisabled(False)
             self.delete_button.setDisabled(False)
-            self.message.setText("")
             self.image_path = ""
             self.display_dialog(f"La carta '{self.item_name.text()}' ha sido ingresada correctamente al inventario.")
         except Exception as e:
@@ -376,19 +480,25 @@ class MainApp(QMainWindow):
 
         # If card exists from inventory
         if product_from_inventory:
+            self.selected_categories = [c["name"] for c in product_from_inventory["categories"]]
+            self.selected_tags = [c["name"] for c in product_from_inventory["tags"]]
+
+            self.check_checkboxes(self.selected_categories)
+            self.check_checkboxes(self.selected_tags)
+
             precio = product_from_inventory['price']
             images = product_from_inventory['images']
             image_url = (images[0]["src"] if len(images) > 0 else "")
             nombre = product_from_inventory['name']
             cantidad = str(product_from_inventory['stock_quantity'])
             self.stock.setText(cantidad)
-            self.message.setText("Carta en Inventario")
             self.insert_button.setDisabled(True)
             self.update_button.setDisabled(False)
             self.delete_button.setDisabled(False)
             self.id = product_from_inventory["id"]
             self.card_type.setCurrentText(product_from_inventory["attributes"][5]["options"][0])
-            self.card_name.setText(nombre.split(" - ")[0].replace(product_from_inventory["attributes"][0]["options"][0], ""))
+            self.card_name.setText(
+                nombre.split(" - ")[0].replace(product_from_inventory["attributes"][0]["options"][0], ""))
             self.item_name.setText(f"{code} {self.card_name.text()} - {edition} - {condition} - {rarity}")
         else:
             info = tyt.get_card_info(set_code=code, edition=edition,
