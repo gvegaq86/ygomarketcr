@@ -38,7 +38,12 @@ class TYTUtils:
             if hide_oos:
                 url += '&hide-oos=on'
 
-            html = requests.get(url=url).text
+            try:
+                html = requests.get(url=url).text
+            except:
+                sleep(60)
+                html = requests.get(url=url).text
+
             parsed_html = BeautifulSoup(html, 'html.parser')
             if 'Sorry, you have exceeded your' in parsed_html.text:
                 cards = "exceeded"
