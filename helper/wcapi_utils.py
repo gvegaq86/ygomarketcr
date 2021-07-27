@@ -24,8 +24,13 @@ class WCAPIUtils:
     def get_products(self, page=1, per_page=100):
         return self.wcapi.get("products", params={"per_page": per_page, "page": page}).json()
 
-    def get_codes(self, page=1, per_page=100):
-        return self.wcapi.get("products/attributes/4/terms", params={"per_page": per_page, "page": page}).json()
+    def get_codes(self, page=1, per_page=100, order_by=None):
+        params = {"per_page": per_page, "page": page, "order": "desc"}
+
+        if order_by:
+            params["orderby"] = order_by
+
+        return self.wcapi.get("products/attributes/4/terms", params=params).json()
 
     def get_all_codes(self):
         pool = ThreadPool(processes=20)
@@ -135,6 +140,7 @@ class WCAPIUtils:
 
     def insert_product(self, data):
         response = self.wcapi.post(f"products", data).json()
+
         if hasattr(response, "data") and response["data"]["status"] != 201:
             raise Exception(response["message"])
         else:

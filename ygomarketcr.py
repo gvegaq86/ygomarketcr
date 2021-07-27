@@ -307,7 +307,8 @@ class MainApp(QMainWindow):
         try:
             item = wcapi.get_products_by_id(id=self.id)
             wcapi.delete_product(id=self.id)
-            wcapi.delete_image(id=item["images"][0]["id"])
+            if item["images"]:
+                wcapi.delete_image(id=item["images"][0]["id"])
             self.display_dialog(f"La carta '{self.item_name.text()}' ha sido eliminada del inventario.")
             self.clear_form()
         except Exception as e:
@@ -452,6 +453,8 @@ class MainApp(QMainWindow):
             }
 
             response = wcapi.insert_product(data=data)
+            wcapi.codes.append(list(filter(lambda x: x["name"] == self.card_code.text(),
+                                           wcapi.get_codes(page=1, per_page=10, order_by="id")))[0])
             self.id = response["id"]
             self.insert_button.setDisabled(True)
             self.update_button.setDisabled(False)
@@ -513,7 +516,7 @@ class MainApp(QMainWindow):
                 self.update_button.setDisabled(True)
                 self.image_path = image_url
                 self.card_type.setFocus()
-                self.item_name.setText(nombre)
+                self.card_name.setText(nombre)
                 self.display_dialog(f"La carta '{self.item_name.text()}' no existe en el inventario pero si en T&T.")
         if (info and info[0]) or product_from_inventory:
             if image_url:
