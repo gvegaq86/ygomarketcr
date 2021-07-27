@@ -13,6 +13,7 @@ from difflib import SequenceMatcher
 
 
 class Utils:
+    time_out = 60
     def get_image_from_google(self, text):
         try:
             api_key = "AIzaSyAz_k0dKF3ckMbweP8EWFKZm4Sydl6qAbw"
@@ -102,7 +103,7 @@ class Utils:
         try:
             print(f'Getting card info from set code: {set_code}')
             url = f'https://db.ygoprodeck.com/api/v7/cardsetsinfo.php?setcode={set_code}'
-            results = requests.get(url=url)
+            results = requests.get(url=url, timeout=self.time_out)
             card_info = json.loads(results.content)
 
             if 'error' in str(card_info):
@@ -382,7 +383,7 @@ class Utils:
 
     def get_exchange_rate(self):
         url = 'https://tipodecambio.paginasweb.cr/api'
-        results = requests.get(url=url)
+        results = requests.get(url=url, timeout=self.time_out)
         exchange_rate = float(json.loads(results.content)['venta'])
 
         return exchange_rate
@@ -392,7 +393,7 @@ class Utils:
             print(f'Getting card info from name: {name}')
             name = name.replace(' ', '%20')
             url = f'https://db.ygoprodeck.com/api/v6/cardinfo.php?fname={name}'
-            results = requests.get(url=url)
+            results = requests.get(url=url, timeout=self.time_out)
             card_info = json.loads(results.content)
 
             card_sets = []
@@ -428,7 +429,27 @@ class Utils:
             print(f'TCGP - Occurred the following error trying to get card sets from name: {e}')
             raise Exception(e)
 
+    def get_rarity(self, card_text):
+        card_text = card_text.upper()
+        rarity = ""
+
+        if "ULTIMATE RARE" in card_text:
+            rarity = "Ultimate Rare"
+        elif "PRISMATIC  SECRET RARE" in card_text:
+            rarity = "Prismatic Secret Rare"
+        elif "SECRET RARE" in card_text:
+            rarity = "Secret Rare"
+        elif "ULTRA RARE" in card_text:
+            rarity = "Ultra Rare"
+        elif "SUPER RARE" in card_text:
+            rarity = "Super Rare"
+
+        return rarity
+
 
 def send_mail(FROM, TO, SUBJECT, TEXT):
-    yag = yagmail.SMTP(FROM, 'Cyberdragon78%')
-    yag.send(TO, SUBJECT, TEXT)
+    try:
+        yag = yagmail.SMTP(FROM, 'Cyberdragon78%')
+        yag.send(TO, SUBJECT, TEXT)
+    except Exception as e:
+        print(f"Ocurredthe following error sending email: {e}")

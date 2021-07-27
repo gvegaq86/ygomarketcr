@@ -27,7 +27,7 @@ def get_images(set_code, edition, condition):
         return False
 
 # Give the location of the file
-loc = ("C:\ygomarketcr\inven.xlsx")
+loc = ("/Users/giovanni.vega/Documents/ygomarketcr/mp21.xlsx")
 from openpyxl import load_workbook
 
 wb = load_workbook(loc)
@@ -44,29 +44,30 @@ for i in range(0, rows-1):
     # ws[i + 2][48].value = codigo.split("-")[0]
     condition = ws[i + 2][56].value
     # ws[i + 2][3].value = f"{codigo} {n} - {edition} - {condition} - {rareza}"
-    ws[i + 2][29].value = f"https://ygomarketcr.com/wp-content/uploads/2021/07/{codigo}-{edition.replace(' ', '-')}-{condition}.jpg"
+    ws[i + 2][29].value = f"https://ygomarketcr.com/wp-content/uploads/2021/10/{codigo}-{edition.replace(' ', '-')}-{condition}.jpg"
     item_found = False
 
     if False and codigo is not None:
-        for file_name in os.listdir('C:\ygomarketcr\card_images'):
-            s = file_name
-            a = file_name.split("-")
-            code2 = f'{a[0]}-{a[1]}'
-            expansion = code2.split("-")[0]
+        for file_name in os.listdir('/Users/giovanni.vega/Documents/ygomarketcr/card_images'):
+            if '.DS_Store' not in file_name:
+                s = file_name
+                a = file_name.split("-")
+                code2 = f'{a[0]}-{a[1]}'
+                expansion = code2.split("-")[0]
 
-            if a[2] == "1st":
-                edition2 = "1st Edition"
-            elif a[2] == "Limited":
-                edition2 = "Limited Edition"
-            else:
-                edition2 = "Unlimited"
+                if a[2] == "1st":
+                    edition2 = "1st Edition"
+                elif a[2] == "Limited":
+                    edition2 = "Limited Edition"
+                else:
+                    edition2 = "Unlimited"
 
-            print(a)
-            condition2 = a[-1].replace(".jpg", "")
+                print(a)
+                condition2 = a[-1].replace(".jpg", "")
 
-            if codigo == code2 and edition == edition2 and condition == condition2:
-                item_found = True
-                break
+                if codigo == code2 and edition == edition2 and condition == condition2:
+                    item_found = True
+                    break
 
         if not item_found:
             if edition == None:

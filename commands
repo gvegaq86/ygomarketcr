@@ -1,0 +1,1 @@
+pyinstaller ygomarketcr.py  --add-data="images;images" --onefile --icon=images/icon.ico --windowed --copy-metadata=pyppeteer

@@ -9,7 +9,8 @@ utils = Utils()
 
 class TYTUtils:
     def __init__(self):
-        self.exchange_rate = requests.get("https://tipodecambio.paginasweb.cr/api").json()
+        self.time_out = 60
+        self.exchange_rate = requests.get("https://tipodecambio.paginasweb.cr/api", timeout=self.time_out).json()
         self.colones_sign = 'CR'
         self.aa = 1
 
@@ -37,12 +38,15 @@ class TYTUtils:
 
             if hide_oos:
                 url += '&hide-oos=on'
-
             try:
-                html = requests.get(url=url).text
+                try:
+                    html = requests.get(url=url, timeout=self.time_out).text
+                except:
+                    sleep(60)
+                    html = requests.get(url=url, timeout=self.time_out).text
             except:
                 sleep(60)
-                html = requests.get(url=url).text
+                html = requests.get(url=url, timeout=self.time_out).text
 
             parsed_html = BeautifulSoup(html, 'html.parser')
             if 'Sorry, you have exceeded your' in parsed_html.text:
@@ -64,8 +68,18 @@ class TYTUtils:
             raise Exception(e)
 
     def get_rounded_price(self, price):
-        rounded_price = round(float(price.replace("$", "")) * self.exchange_rate["venta"] / 500.0) * 500
-        return str("500" if rounded_price == 0 else rounded_price)
+        price = round(float((price).replace("$", "")) * self.exchange_rate["venta"])
+
+        if price <= 250:
+            price = 300
+        elif 300 <= price <= 650:
+            price = 500
+        elif 650 < price <= 750:
+            price = 750
+        else:
+            price = round(price / 500) * 500
+
+        return str(price)
 
     def get_ref_link(self, codigo):
         tcgp_link = ""
@@ -131,6 +145,7 @@ class TYTUtils:
             full_results_message += not_found_card_results + "\n" + "\n"
 
         if full_results_message:
+            print("Emailing results...")
             # send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com"],
             send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com", "juangamboa16201@gmail.com"],
                       "Resumen de Precios a actualizar - YgoMarketCR", full_results_message)
@@ -139,6 +154,8 @@ class TYTUtils:
         try:
             print(f'T&T - Getting prices from set code: {set_code}')
             # Get card info
+            if "LCJW" in set_code:
+                edition = "Unlimited"
 
             cards = self.get_html_card_info(card_key=set_code, edition=edition, condition=condition, rarity=rarity,
                                             hide_oos=hide_oos)
@@ -157,9 +174,13 @@ class TYTUtils:
                         for item in items:
                             e = item.contents[1].text
 
-                            if "1st Edition" in e:
+                            if "PROMO" in card_text:
+                                displayed_edition = "Limited Edition"
+                            elif "LCJW" in card_text:
+                                displayed_edition = "Unlimited"
+                            elif "1st Edition" in card_text or "1st Edition" in e:
                                 displayed_edition = "1st Edition"
-                            elif "Unlimited" in e:
+                            elif "Unlimited" in card_text or "Unlimited" in e:
                                 displayed_edition = "Unlimited"
                             else:
                                 displayed_edition = "Limited Edition"
@@ -171,20 +192,25 @@ class TYTUtils:
                                 displayed_condition = "LP"
 
                             displayed_rarity = \
-                                card_text.replace(displayed_edition, "").replace(set_code, "").split(" - ")[-1]. \
-                                    replace("-", "").strip()
+                                card_text.replace(displayed_edition, "").replace("Limited", "").replace("1st Ed", "").\
+                            replace("1st", "").replace(set_code, "").split(" - ")[-1]. \
+                                    replace("-", "").strip().replace("(Sealed)", "").strip().title()
+
+                            if not displayed_rarity:
+                                displayed_rarity = utils.get_rarity(card_text)
 
                             quantity = int(item.contents[2].text)
                             displayed_code = card_text.replace(rarity, "").replace(edition, "").replace("- ", "")
 
                             p = float(item.contents[3].next.replace("$", "").replace(",", ""))
                             seller = item.contents[0].contents[0].attrs["title"]
+                            seller_image = item.contents[0].contents[0].attrs["src"].split("/")[-1]
                             card1 = CardInfo(card_name=card_name, card_key=displayed_code,
                                              condition=displayed_condition,
                                              price=p, pricec="0", edition=displayed_edition, rarity=rarity, quantity=1,
                                              expansion="", image=card_image, web_site='T&T', seller=seller)
-                            # if seller not in ("Teppi", "PokeOrder") and condition == displayed_condition and \
-                            if seller not in ("Teppi", "PokeOrder", "Godsarena", "Pandaxpress") and displayed_edition in (
+
+                            if displayed_edition in (
                                     ["Limited Edition", "Unlimited"] if edition in ["Limited Edition",
                                                                                     "Unlimited"] else edition) and \
                                     displayed_rarity == rarity and set_code in displayed_code:

@@ -13,6 +13,7 @@ class TYTUtils:
         self.exchange_rate = exchange_rate
         self.colones_sign = 'CR'
         self.aa=1
+        self.time_out = 60
 
     def get_card_info(self, card_key, edition, condition, rarity=None, hide_oos=False):
         try:
@@ -44,7 +45,7 @@ class TYTUtils:
             if hide_oos:
                 url += '&hide-oos=on'
 
-            html = requests.get(url=url).text
+            html = requests.get(url=url, timeout=self.time_out).text
             parsed_html = BeautifulSoup(html, 'html.parser')
             if 'Sorry, you have exceeded your' in parsed_html.text:
                cards = "exceeded"
