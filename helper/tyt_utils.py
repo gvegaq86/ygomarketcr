@@ -37,9 +37,12 @@ class TYTUtils:
 
             if hide_oos:
                 url += '&hide-oos=on'
-
             try:
-                html = requests.get(url=url).text
+                try:
+                    html = requests.get(url=url).text
+                except:
+                    sleep(60)
+                    html = requests.get(url=url).text
             except:
                 sleep(60)
                 html = requests.get(url=url).text
@@ -139,7 +142,6 @@ class TYTUtils:
         try:
             print(f'T&T - Getting prices from set code: {set_code}')
             # Get card info
-
             cards = self.get_html_card_info(card_key=set_code, edition=edition, condition=condition, rarity=rarity,
                                             hide_oos=hide_oos)
             seller = ""
@@ -179,12 +181,15 @@ class TYTUtils:
 
                             p = float(item.contents[3].next.replace("$", "").replace(",", ""))
                             seller = item.contents[0].contents[0].attrs["title"]
+                            seller_image =item.contents[0].contents[0].attrs["src"].split("/")[-1]
                             card1 = CardInfo(card_name=card_name, card_key=displayed_code,
                                              condition=displayed_condition,
                                              price=p, pricec="0", edition=displayed_edition, rarity=rarity, quantity=1,
                                              expansion="", image=card_image, web_site='T&T', seller=seller)
-                            # if seller not in ("Teppi", "PokeOrder") and condition == displayed_condition and \
-                            if seller not in ("Teppi", "PokeOrder", "Godsarena", "Pandaxpress") and displayed_edition in (
+
+                            if seller not in ("Teppi", "PokeOrder", "Godsarena", "Pandaxpress", "SKYAThatOneGuy",
+                                              "4CornersCollectibles") \
+                                    and "Merchant" not in seller_image and displayed_edition in (
                                     ["Limited Edition", "Unlimited"] if edition in ["Limited Edition",
                                                                                     "Unlimited"] else edition) and \
                                     displayed_rarity == rarity and set_code in displayed_code:

@@ -1,7 +1,13 @@
+import json
+import os
+import sys
+
 import requests
-from PyQt5 import QtGui, QtWidgets
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+
 from helper.tyt_utils import TYTUtils
 from helper.utils import Utils
 from helper.wcapi_utils import WCAPIUtils
@@ -15,192 +21,382 @@ class Validator(QtGui.QValidator):
     def validate(self, string, pos):
         return QtGui.QValidator.Acceptable, string.upper(), pos
 
-
 class MainApp(QMainWindow):
     id = ""
 
-    def __init__(self, parent=None, *args):
-        super(MainApp, self).__init__(parent=parent)
+    def __init__(self):
+        super().__init__()
+        qApp.installEventFilter(self)
+        self.setStyleSheet("background-color: #27282c;")
+        self.setWindowIcon(QtGui.QIcon('images/icon.ico'))
+        edition_terms = ['1st Edition', 'Duel Terminal', 'Limited Edition', 'Unlimited']
+        condition_terms = ['LP', 'NM', 'PL', 'MP', 'HP']
+        card_type_terms = ['', 'Monstruo', 'Magia', 'Trampa', 'Fusión', 'Link', 'XYZ', 'Token', 'Ritual', 'Synchro']
         completer = QCompleter(wcapi.code_list)
+        self.dash_was_pressed = False
+
         rarity_terms = wcapi.get_rarity_terms()
-        edition_terms = wcapi.get_edition_terms()
-        condition_terms = wcapi.get_condition_terms()
-        card_type_terms = wcapi.get_card_type_terms()
         self.categories_terms = wcapi.get_categories_terms()
         self.edit_tags_terms = wcapi.get_edit_tags_terms()
-        self.image_path = ""
-        self.i = 1
-        self.image_list = []
-        self.setFixedSize(620, 500)
-        self.setWindowTitle("YgoMarketCR")
-        self.selected_categories = []
-        self.selected_tags = []
 
         # Elementos
+        self.selected_tags = []
         self.image = QLabel(self)
+        self.setWindowTitle("YgoMarketCR")
+        self.setFixedSize(620, 500)
 
         # Card Code
         self.card_code_label = QLabel(self)
-        self.card_code_label.setText("Codigo de carta")
+        self.card_code_label.setStyleSheet("color: #98c379;")
+        self.card_code_label.setText("Código de carta")
         self.card_code = QLineEdit(self)
-        self.card_code.setPlaceholderText("codigo")
+        self.card_code.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); font: 15px;")
+        self.card_code.setPlaceholderText("Código")
         self.card_code.setValidator(Validator(self))
         self.card_code_label.setGeometry(10, 10, 100, 10)
-        self.card_code.setGeometry(10, 30, 95, 30)
+        self.card_code.setGeometry(10, 25, 95, 30)
         self.card_code.setMaxLength(10)
-        self.card_code.textChanged.connect(self.update_card_code)
+        self.card_code.textEdited.connect(self.update_card_code)
         self.card_code.setCompleter(completer)
+        self.card_code.returnPressed.connect(self.slot_load)
+        self.card_code.setAlignment(Qt.AlignCenter)
+
+        # Agregar "EN" checkbox
+        self.frame00 = QFrame(self)
+        self.frame00.setGeometry(5, 55, 130, 20)
+        self.add_en_checkbox = QCheckBox("Agregar 'EN'", self.frame00)
+        self.add_en_checkbox.setStyleSheet("color: white;")
+        self.add_en_checkbox.setChecked(True)
 
         # Image
         self.image.setGeometry(370, 10, 240, 350)
+        self.image.setStyleSheet("border-color: white;")
         self.image.setScaledContents(True)
         self.load_image = QPushButton("Cargar Imagen...", self)
+        self.load_image.setStyleSheet(":enabled { color: black"
+                                      + "; background-color: white"
+                                      + "; border-color: black"
+                                      + " } :hover { color: black"
+                                      + "; border-color: black"
+                                      + "; background-color: lightgray"
+                                      + " } :disabled { color: black"
+                                      + "; border-color: black"
+                                      + "; background-color: gray" + " }")
         self.load_image.clicked.connect(self.slot_load_image)
-        self.load_image.setGeometry(320, 360, 130, 30)
+        self.load_image.setGeometry(325, 370, 120, 30)
 
         # Image google
         self.load_image_google = QPushButton("Buscar imagen en google", self)
+        self.load_image_google.setStyleSheet(":enabled { color: black"
+                                             + "; background-color: white"
+                                             + "; border-color: black"
+                                             + " } :hover { color: black"
+                                             + "; border-color: black"
+                                             + "; background-color: lightgray"
+                                             + " } :disabled { color: black"
+                                             + "; border-color: black"
+                                             + "; background-color: gray" + " }")
         self.load_image_google.clicked.connect(self.slot_load_image_from_google)
-        self.load_image_google.setGeometry(440, 360, 175, 30)
+        self.load_image_google.setGeometry(445, 370, 160, 30)
 
         # Siguiente imagen google
         self.next_image = QPushButton("Siguiente imagen", self)
+        self.next_image.setStyleSheet(":enabled { color: black"
+                                      + "; background-color: white"
+                                      + "; border-color: black"
+                                      + " } :hover { color: black"
+                                      + "; border-color: black"
+                                      + "; background-color: lightgray"
+                                      + " } :disabled { color: black"
+                                      + "; border-color: black"
+                                      + "; background-color: gray" + " }")
         self.next_image.clicked.connect(self.slot_next_image)
-        self.next_image.setGeometry(440, 390, 130, 30)
+        self.next_image.setGeometry(445, 400, 160, 30)
+
+        # Consultar en T&T
+        self.ask_tyt = QPushButton("", self)
+        self.ask_tyt.setStyleSheet(":enabled { color: black"
+                                   + "; background-color: white"
+                                   + "; border-color: black"
+                                   + " } :hover { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: lightgray"
+                                   + " } :disabled { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: gray" + " }")
+        self.ask_tyt.setIcon(QIcon("images/trollandtoad.com.jpg"))
+        self.ask_tyt.setIconSize(QtCore.QSize(70, 70))
+        self.ask_tyt.clicked.connect(self.go_tyt)
+        self.ask_tyt.setGeometry(325, 440, 80, 50)
+
+        # Consultar en TCGPlayer
+        self.ask_tcgp = QPushButton("", self)
+        self.ask_tcgp.setStyleSheet(":enabled { color: black"
+                                   + "; background-color: white"
+                                   + "; border-color: black"
+                                   + " } :hover { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: lightgray"
+                                   + " } :disabled { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: gray" + " }")
+        self.ask_tcgp.setIcon(QIcon("images/TCGplayer.png"))
+        self.ask_tcgp.setIconSize(QtCore.QSize(60, 60))
+        self.ask_tcgp.clicked.connect(self.go_tcgp)
+        self.ask_tcgp.setGeometry(410, 440, 80, 50)
+
+        # Consultar en Ebay
+        self.ask_ebay = QPushButton("", self)
+        self.ask_ebay.setStyleSheet(":enabled { color: black"
+                                   + "; background-color: white"
+                                   + "; border-color: black"
+                                   + " } :hover { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: lightgray"
+                                   + " } :disabled { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: gray" + " }")
+        self.ask_ebay.setIcon(QIcon("images/ebay.png"))
+        self.ask_ebay.setIconSize(QtCore.QSize(60, 60))
+        self.ask_ebay.clicked.connect(self.go_ebay)
+        self.ask_ebay.setGeometry(495, 440, 80, 50)
 
         # Condition
         self.condition_label = QLabel(self)
-        self.condition_label.setText("Condicion")
+        self.condition_label.setStyleSheet("color: #98c379;")
+        self.condition_label.setText("Condición")
         self.condition = QComboBox(self)
+        self.condition.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); "
+                                     "selection-background-color: lightgray;")
         self.condition.addItems(condition_terms)
-        self.condition_label.setGeometry(115, -5, 80, 40)
-        self.condition.setGeometry(110, 20, 100, 40)
+        self.condition_label.setGeometry(115, 10, 80, 10)
+        self.condition.setGeometry(115, 25, 100, 30)
         self.condition.currentIndexChanged.connect(self.update_name)
 
         # Edition
         self.edition_label = QLabel(self)
-        self.edition_label.setText("Edicion")
+        self.edition_label.setStyleSheet("color: #98c379;")
+        self.edition_label.setText("Edición")
         self.edition = QComboBox(self)
+        self.edition.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); "
+                                   "selection-background-color: lightgray;")
         self.edition.addItems(edition_terms)
-        self.edition_label.setGeometry(215, -5, 130, 40)
-        self.edition.setGeometry(210, 20, 130, 40)
+        self.edition_label.setGeometry(225, 10, 130, 10)
+        self.edition.setGeometry(225, 25, 130, 30)
         self.edition.currentIndexChanged.connect(self.update_name)
 
         # Rareza
         self.rarity_label = QLabel(self)
+        self.rarity_label.setStyleSheet("color: #98c379;")
         self.rarity_label.setText("Rareza")
         self.rarity = QComboBox(self)
+        self.rarity.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); "
+                                  "selection-background-color: lightgray;")
         self.rarity.addItems(rarity_terms)
-        self.rarity_label.setGeometry(10, 60, 130, 40)
-        self.rarity.setGeometry(5, 80, 180, 40)
+        self.rarity_label.setGeometry(10, 80, 130, 10)
+        self.rarity.setGeometry(10, 95, 150, 30)
         self.rarity.currentIndexChanged.connect(self.update_name)
 
         # Boton buscar
-        self.buscar = QPushButton("Buscar", self)
-        self.buscar.setGeometry(190, 80, 80, 40)
+        self.buscar = QPushButton("", self)
+        self.buscar.setStyleSheet(":enabled { color: black"
+                                  + "; background-color: white"
+                                  + "; border-color: black"
+                                  + " } :hover { color: black"
+                                  + "; border-color: black"
+                                  + "; background-color: lightgray"
+                                  + " } :disabled { color: black"
+                                  + "; border-color: black"
+                                  + "; background-color: gray" + " }")
+        self.buscar.setIcon(QIcon("images/search.png"))
+        self.buscar.setGeometry(200, 70, 50, 50)
+        self.buscar.setIconSize(QtCore.QSize(35, 35))
         self.buscar.clicked.connect(self.slot_load)
 
         # Boton Limpiar
-        self.clear = QPushButton("Limpiar", self)
-        self.clear.setGeometry(260, 80, 80, 40)
+        self.clear = QPushButton("", self)
+        self.clear.setStyleSheet(":enabled { color: black"
+                                 + "; background-color: white"
+                                 + "; border-color: black"
+                                 + " } :hover { color: black"
+                                 + "; border-color: black"
+                                 + "; background-color: lightgray"
+                                 + " } :disabled { color: black"
+                                 + "; border-color: black"
+                                 + "; background-color: gray" + " }")
+        self.clear.setIcon(QIcon("images/clear.png"))
+        self.clear.setIconSize(QtCore.QSize(35, 35))
+        self.clear.setGeometry(255, 70, 50, 50)
         self.clear.clicked.connect(self.slot_clear)
 
         # Info label
         self.info_label = QLabel(self)
+        self.info_label.setStyleSheet("color: #d19a66;")
         self.info_label.setText("Datos de la carta:")
-        self.info_label.setGeometry(10, 130, 180, 40)
+        self.info_label.setGeometry(10, 150, 180, 10)
 
         # Name of the card
         self.card_name_label = QLabel(self)
+        self.card_name_label.setStyleSheet("color: #98c379;")
         self.card_name_label.setText("Nombre de la Carta")
         self.card_name = QLineEdit(self)
-        self.card_name_label.setGeometry(10, 160, 350, 40)
-        self.card_name.setGeometry(10, 165, 350, 25)
+        self.card_name.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8);")
+        self.card_name_label.setGeometry(10, 170, 350, 10)
+        self.card_name.setGeometry(10, 185, 350, 25)
         self.card_name.setPlaceholderText("Nombre de la carta")
         self.card_name.textChanged.connect(self.update_name)
         self.card_name.setValidator(Validator(self))
 
         # Nombre del  Item
         self.item_name_label = QLabel(self)
+        self.item_name_label.setStyleSheet("color: #98c379;")
         self.item_name_label.setText("Nombre del Item")
         self.item_name = QLineEdit(self)
-        self.item_name_label.setGeometry(10, 195, 350, 40)
-        self.item_name.setGeometry(10, 200, 350, 25)
+        self.item_name.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8);")
+        self.item_name_label.setGeometry(10, 220, 350, 10)
+        self.item_name.setGeometry(10, 235, 350, 25)
         self.item_name.setPlaceholderText("Nombre del Item")
         self.item_name.setDisabled(True)
+        self.item_name.setAlignment(QtCore.Qt.AlignLeft)
 
         # Stock
         self.stock = QLineEdit(self)
+        self.stock.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8);")
         self.stock_label = QLabel(self)
+        self.stock_label.setStyleSheet("color: #98c379;")
         self.stock_label.setText("Stock")
-        self.stock_label.setGeometry(10, 220, 80, 40)
-        self.stock.setGeometry(10, 245, 40, 30)
+        self.stock_label.setGeometry(10, 270, 80, 10)
+        self.stock.setGeometry(10, 285, 40, 30)
         self.stock.setText("0")
 
         # Prize
         self.prize = QLineEdit(self)
+        self.prize.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8);")
         self.prize_label = QLabel(self)
+        self.prize_label.setStyleSheet("color: #98c379;")
         self.prize_label.setText("Precio")
-        self.prize_label.setGeometry(60, 220, 80, 40)
-        self.prize.setGeometry(60, 245, 80, 25)
+        self.prize_label.setGeometry(60, 270, 80, 10)
+        self.prize.setGeometry(60, 285, 80, 30)
         self.prize.setText("0")
+        self.prize.setValidator(QDoubleValidator(self))
+        self.prize.setInputMask("₡0000000")
 
         # Tipo de Carta
         self.card_type_label = QLabel(self)
+        self.card_type_label.setStyleSheet("color: #98c379;")
         self.card_type_label.setText("Tipo de Carta")
         self.card_type = QComboBox(self)
+        self.card_type.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); "
+                                     "selection-background-color: lightgray;")
         self.card_type.addItems(card_type_terms)
-        self.card_type_label.setGeometry(145, 220, 180, 40)
-        self.card_type.setGeometry(140, 240, 100, 40)
+        self.card_type_label.setGeometry(150, 270, 180, 10)
+        self.card_type.setGeometry(150, 285, 100, 30)
 
         # Categorias
         self.categories_label = QLabel(self)
+        self.categories_label.setStyleSheet("color: #d19a66;")
         self.categories_label.setText("Categorias")
-        self.categories_label.setGeometry(30, 290, 100, 40)
+        self.categories_label.setGeometry(30, 330, 100, 10)
 
         self.frame = QFrame(self)
-        self.frame.setGeometry(30, 330, 100, 100)
+        self.frame.setGeometry(30, 350, 100, 100)
         self.avanzado = QCheckBox("Avanzado", self.frame)
+        self.avanzado.setStyleSheet("color: white;")
         self.avanzado.setChecked(True)
 
         self.frame2 = QFrame(self)
-        self.frame2.setGeometry(30, 350, 100, 100)
+        self.frame2.setGeometry(30, 370, 100, 100)
         self.old_school = QCheckBox("Old School", self.frame2)
+        self.old_school.setStyleSheet("color: white;")
 
         self.frame3 = QFrame(self)
-        self.frame3.setGeometry(30, 370, 100, 100)
+        self.frame3.setGeometry(30, 390, 100, 100)
         self.high_end = QCheckBox("High-End", self.frame3)
+        self.high_end.setStyleSheet("color: white;")
 
         # Etiquetas
         self.tag_label = QLabel(self)
+        self.tag_label.setStyleSheet("color: #d19a66;")
         self.tag_label.setText("Etiquetas")
-        self.tag_label.setGeometry(130, 290, 100, 40)
+        self.tag_label.setGeometry(130, 330, 100, 10)
 
         self.frame4 = QFrame(self)
-        self.frame4.setGeometry(130, 330, 100, 100)
+        self.frame4.setGeometry(130, 350, 100, 100)
         self.goat = QCheckBox("goat", self.frame4)
+        self.goat.setStyleSheet("color: white;")
 
         self.frame5 = QFrame(self)
-        self.frame5.setGeometry(130, 350, 100, 100)
+        self.frame5.setGeometry(130, 370, 100, 100)
         self.jck = QCheckBox("jck", self.frame5)
+        self.jck.setStyleSheet("color: white;")
+
+        self.frame6 = QFrame(self)
+        self.frame6.setGeometry(130, 390, 100, 100)
+        self.gvq = QCheckBox("gvq", self.frame6)
+        self.gvq.setStyleSheet("color: white;")
 
         # Botones de ingresar y actualizar
-        self.insert_button = QPushButton("Ingresar", self)
-        self.update_button = QPushButton("Actualizar", self)
-        self.delete_button = QPushButton("Eliminar", self)
-        self.insert_button.setGeometry(10, 420, 100, 50)
+        self.insert_button = QPushButton("", self)
+        self.insert_button.setStyleSheet(":enabled { color: black"
+                                         + "; background-color: white"
+                                         + "; border-color: black"
+                                         + " } :hover { color: black"
+                                         + "; border-color: black"
+                                         + "; background-color: lightgray"
+                                         + " } :disabled { color: black"
+                                         + "; border-color: black"
+                                         + "; background-color: gray" + " }")
+        self.insert_button.setIcon(QIcon("images/add.ico"))
+        self.insert_button.setIconSize(QtCore.QSize(35, 35))
+        self.update_button = QPushButton("", self)
+        self.update_button.setStyleSheet(":enabled { color: black"
+                                         + "; background-color: white"
+                                         + "; border-color: black"
+                                         + " } :hover { color: black"
+                                         + "; border-color: black"
+                                         + "; background-color: lightgray"
+                                         + " } :disabled { color: black"
+                                         + "; border-color: black"
+                                         + "; background-color: gray" + " }")
+        self.update_button.setIconSize(QtCore.QSize(35, 35))
+        self.update_button.setIcon(QIcon("images/save.ico"))
+        self.delete_button = QPushButton("", self)
+        self.delete_button.setStyleSheet(":enabled { color: black"
+                                         + "; background-color: white"
+                                         + "; border-color: black"
+                                         + " } :hover { color: black"
+                                         + "; border-color: black"
+                                         + "; background-color: lightgray"
+                                         + " } :disabled { color: black"
+                                         + "; border-color: black"
+                                         + "; background-color: gray" + " }")
+        self.delete_button.setIcon(QIcon("images/remove.ico"))
+        self.delete_button.setIconSize(QtCore.QSize(35, 35))
+        self.insert_button.setGeometry(55, 435, 50, 50)
         self.insert_button.clicked.connect(self.slot_insert)
-        self.update_button.setGeometry(110, 420, 100, 50)
+        self.update_button.setGeometry(110, 435, 50, 50)
         self.update_button.clicked.connect(self.slot_update)
-        self.delete_button.setGeometry(210, 420, 100, 50)
+        self.delete_button.setGeometry(165, 435, 50, 50)
         self.delete_button.clicked.connect(self.slot_delete)
         self.clear_form()
 
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.KeyPress:
+            if event.key() == 45:
+                self.dash_was_pressed = True
+            else:
+                self.dash_was_pressed = False
+
+        return super(QWidget, self).eventFilter(obj, event)
+
     def update_card_code(self, event):
+        if self.add_en_checkbox.checkState() and self.card_code.text() and \
+                self.dash_was_pressed and self.card_code.text()[-1] == "-":
+            self.card_code.setText(self.card_code.text() + "EN")
         self.card_name.setText("")
         self.update_name(event)
 
-    def check_checkboxes(self, options):
+    def set_checkboxes(self, options):
         for o in options:
             if o == "High-End":
                 self.high_end.setChecked(True)
@@ -210,8 +406,14 @@ class MainApp(QMainWindow):
                 self.old_school.setChecked(True)
             if o == "jck":
                 self.jck.setChecked(True)
+                self.display_dialog("La carta pertenece a Juan Carlos, se se requiere actualizar la cantidad de items, "
+                                    "debera ingresarse directamente en Woocommerce como un item completamente nuevo.")
             if o == "goat":
                 self.goat.setChecked(True)
+            if o == "gvq":
+                self.gvq.setChecked(True)
+                self.display_dialog("La carta pertenece a Giovanni, se se requiere actualizar la cantidad de items, "
+                                    "debera ingresarse directamente en Woocommerce como un item completamente nuevo.")
 
     def get_category_list(self):
         categories = []
@@ -229,8 +431,9 @@ class MainApp(QMainWindow):
             tags.append("jck")
         if self.goat.checkState():
             tags.append("goat")
+        if self.gvq.checkState():
+            tags.append("gvq")
         return tags
-
 
     def update_name(self, event):
         self.item_name.setText(f"{self.card_code.text()} {self.card_name.text()} - {self.edition.currentText()} - "
@@ -243,6 +446,7 @@ class MainApp(QMainWindow):
 
     def clear_form(self):
         self.card_code.clear()
+        self.card_type.setCurrentText("")
         self.condition.setCurrentText("NM")
         self.edition.setCurrentText("1st Edition")
         self.rarity.setCurrentText("Ultra Rare")
@@ -261,12 +465,22 @@ class MainApp(QMainWindow):
         self.high_end.setChecked(False)
         self.old_school.setChecked(False)
         self.jck.setChecked(False)
+        self.gvq.setChecked(False)
         self.goat.setChecked(False)
         self.item_name.setText(f"{self.card_code.text()} - {self.edition.currentText()} - "
                                f"{self.condition.currentText()} - {self.rarity.currentText()}")
 
     def slot_update(self):
         try:
+            if self.card_name.text() == "":
+                self.display_dialog("El nombre de la carta no puede estar en blanco.")
+                self.card_name.setFocus()
+                return None
+            elif self.card_type.currentText() == "":
+                self.display_dialog("El tipo de carta no puede estar en blanco.")
+                self.card_type.showPopup()
+                return None
+
             tags = []
             categories = []
 
@@ -325,6 +539,52 @@ class MainApp(QMainWindow):
             self.image.show()
         self.image_path = file_name
 
+    def go_tyt(self):
+        if self.card_code.text() != "":
+            edition = self.edition.currentText()
+            if edition == "Unlimited":
+                edition = "+"
+            else:
+                edition = edition.replace(" ", "+")
+
+            link = f'https://www.trollandtoad.com/yugioh/all-yu-gi-oh-singles/7087?sort-order=L-H&item-condition=' \
+                   f'{"NM" if self.condition.currentText() == "NM" else "PL"}&search-words=' \
+                   f'{self.card_code.text()}+{self.card_name.text().replace(" ", "+")}+' \
+                   f'{edition}+{self.rarity.currentText().replace(" ", "+")}'
+
+            os.system(f'open -a "Google Chrome" "{link}"')
+        else:
+            self.display_dialog("El codigo de la carta debe ser ingresado.")
+            self.card_code.setFocus()
+
+    def go_ebay(self):
+        if self.card_code.text() != "":
+            link = f'https://www.ebay.com/sch/i.html?_from=R40&_nkw=' \
+                   f'{self.card_code.text()}+{self.card_name.text().replace(" ", "+")}+' \
+                   f'{self.rarity.currentText().replace(" ", "+")}+{self.rarity.currentText().replace(" ", "+")}' \
+                   f'&_sacat=183454&LH_TitleDesc=0&LH_BIN=1&_sop=15'
+
+            os.system(f'open -a "Google Chrome" "{link}"')
+        else:
+            self.display_dialog("El codigo de la carta debe ser ingresado.")
+            self.card_code.setFocus()
+
+    def go_tcgp(self):
+        if self.card_name.text() != "":
+            rarity = self.rarity.currentText()
+            if rarity == "Common":
+                rarity = "Common%20%2F%20Short%20Print"
+            else:
+                rarity = rarity.replace(" ", "%20")
+            link = f'https://www.tcgplayer.com/search/yugioh/product?productLineName=yugioh&' \
+                   f'q={self.card_name.text().replace(" ", "%20")}&ProductTypeName=Cards&page=1&' \
+                   f'RarityName={rarity}'
+
+            os.system(f'open -a "Google Chrome" "{link}"')
+        else:
+            self.display_dialog("El nombre de la carta debe ser ingresada.")
+            self.card_name.setFocus()
+
     def slot_next_image(self):
         self.next_image.setDisabled(True)
         try:
@@ -363,6 +623,15 @@ class MainApp(QMainWindow):
 
     def slot_insert(self):
         try:
+            if self.card_name.text() == "":
+                self.display_dialog("El nombre de la carta no puede estar en blanco.")
+                self.card_name.setFocus()
+                return None
+            elif self.card_type.currentText() == "":
+                self.display_dialog("El tipo de carta no puede estar en blanco.")
+                self.card_type.showPopup()
+                return None
+
             tags = []
             categories = []
 
@@ -453,8 +722,14 @@ class MainApp(QMainWindow):
             }
 
             response = wcapi.insert_product(data=data)
-            wcapi.codes.append(list(filter(lambda x: x["name"] == self.card_code.text(),
-                                           wcapi.get_codes(page=1, per_page=10, order_by="id")))[0])
+            cc = list(filter(lambda x: x["name"] == self.card_code.text(),
+                             wcapi.get_codes(page=1, per_page=10, order_by="id")))
+
+            if cc:
+                wcapi.codes.append(cc[0])
+                with open('card_codes.json', 'w') as convert_file:
+                    convert_file.write(json.dumps(wcapi.codes, indent=4))
+
             self.id = response["id"]
             self.insert_button.setDisabled(True)
             self.update_button.setDisabled(False)
@@ -468,7 +743,16 @@ class MainApp(QMainWindow):
     def slot_clear(self):
         self.clear_form()
 
+    def reset_checkboxes(self):
+        self.avanzado.setChecked(False)
+        self.old_school.setChecked(False)
+        self.high_end.setChecked(False)
+        self.jck.setChecked(False)
+        self.gvq.setChecked(False)
+        self.goat.setChecked(False)
+
     def slot_load(self):
+        self.reset_checkboxes()
         self.item_name.setText(f"{self.card_code.text()} - {self.edition.currentText()} - "
                                f"{self.condition.currentText()} - {self.rarity.currentText()}")
 
@@ -487,8 +771,8 @@ class MainApp(QMainWindow):
             self.selected_categories = [c["name"] for c in product_from_inventory["categories"]]
             self.selected_tags = [c["name"] for c in product_from_inventory["tags"]]
 
-            self.check_checkboxes(self.selected_categories)
-            self.check_checkboxes(self.selected_tags)
+            self.set_checkboxes(self.selected_categories)
+            self.set_checkboxes(self.selected_tags)
 
             precio = product_from_inventory['price']
             images = product_from_inventory['images']
@@ -509,14 +793,15 @@ class MainApp(QMainWindow):
                                      condition=condition.split(" ")[0], hide_oos=False,
                                      rarity=rarity)
             if info and info[0]:
+                self.avanzado.setChecked(True)
                 precio = tyt.get_rounded_price(info[0][0]["price"])
                 image_url = info[0][0]["image"]
                 nombre = info[0][0]["card_name"]
-                self.stock.setText("0")
+                self.stock.setText("1")
                 self.insert_button.setDisabled(False)
                 self.update_button.setDisabled(True)
                 self.image_path = image_url
-                self.card_type.setFocus()
+                self.card_type.setCurrentText("")
                 self.card_name.setText(nombre)
                 message = f"La carta '{self.item_name.text()}' no existe en el inventario pero si en T&T."
         if (info and info[0]) or product_from_inventory:
@@ -530,8 +815,10 @@ class MainApp(QMainWindow):
             self.prize.setText(precio)
             if message:
                 self.display_dialog(message)
+                self.card_type.showPopup()
         else:
-            self.stock.setText("0")
+            self.avanzado.setChecked(True)
+            self.stock.setText("1")
             self.item_name.setText(f"{code}  - {edition} - {condition} - {rarity}")
             self.prize.setText("0")
             self.image.clear()
@@ -543,11 +830,13 @@ class MainApp(QMainWindow):
             self.insert_button.setDisabled(False)
             self.update_button.setDisabled(True)
             self.delete_button.setDisabled(True)
+            self.card_type.setCurrentText("")
             self.display_dialog(f"La carta '{self.item_name.text()}' no existe en el inventario ni en T&T.")
+            self.card_type.showPopup()
 
 
 if __name__ == "__main__":
-    app = QApplication([])
+    app = QApplication(sys.argv)
     window = MainApp()
     window.show()
     app.exec_()

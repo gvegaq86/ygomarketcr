@@ -8,8 +8,8 @@ Usage:
 from setuptools import setup
 
 APP = ['ygomarketcr.py']
-DATA_FILES = []
-OPTIONS = {'iconfile': 'images/icon.ico',}
+DATA_FILES = [('', ['images'])]
+OPTIONS = {'argv_emulation': True, "iconfile": "images/icon.ico"}
 
 setup(
     app=APP,
