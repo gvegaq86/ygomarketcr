@@ -257,7 +257,7 @@ class MainApp(QMainWindow):
         self.id = ""
         self.image_path = ""
         self.image.clear()
-        self.avanzado.setChecked(False)
+        self.avanzado.setChecked(True)
         self.high_end.setChecked(False)
         self.old_school.setChecked(False)
         self.jck.setChecked(False)
@@ -473,6 +473,7 @@ class MainApp(QMainWindow):
                                f"{self.condition.currentText()} - {self.rarity.currentText()}")
 
         self.id = ""
+        message = ""
         code = self.card_code.text()
         condition = self.condition.currentText()
         edition = self.edition.currentText()
@@ -517,7 +518,7 @@ class MainApp(QMainWindow):
                 self.image_path = image_url
                 self.card_type.setFocus()
                 self.card_name.setText(nombre)
-                self.display_dialog(f"La carta '{self.item_name.text()}' no existe en el inventario pero si en T&T.")
+                message = f"La carta '{self.item_name.text()}' no existe en el inventario pero si en T&T."
         if (info and info[0]) or product_from_inventory:
             if image_url:
                 image = QImage()
@@ -527,6 +528,8 @@ class MainApp(QMainWindow):
             else:
                 self.image.clear()
             self.prize.setText(precio)
+            if message:
+                self.display_dialog(message)
         else:
             self.stock.setText("0")
             self.item_name.setText(f"{code}  - {edition} - {condition} - {rarity}")
