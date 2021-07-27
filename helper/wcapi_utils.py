@@ -104,6 +104,7 @@ class WCAPIUtils:
             if items:
                 products.extend(items)
                 i += 1
+                break
             else:
                 break
         print(f"{len(products)} products were found")

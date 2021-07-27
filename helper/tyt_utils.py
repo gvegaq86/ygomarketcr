@@ -55,7 +55,7 @@ class TYTUtils:
                 return []
 
         except Exception as e:
-            print(f'TYT - Occurred the following error trying to get card info: {e}')
+            print(f'TYT - Occurred the following error trying to get card infoxx: {e}')
             raise Exception(e)
 
     def get_rounded_price(self, price):
