@@ -8,7 +8,7 @@ import json
 
 class WCAPIUtils:
     def __init__(self, consumer_key="ck_0d88e046fbbacea08525bbf74f77cfd5794ada29",
-                 consumer_secret="cs_683c187a8a5a809e7753a74cd4daf57514986165"):
+                 consumer_secret="cs_683c187a8a5a809e7753a74cd4daf57514986165", ignore_code_file=False):
         self.wcapi = API(
             url="https://ygomarketcr.com",
             consumer_key=consumer_key,
@@ -18,19 +18,20 @@ class WCAPIUtils:
         )
 
         data = []
-        if os.path.exists("card_codes.json"):
-            with open('card_codes.json') as json_file:
-                data = json.load(json_file)
-            start_from_page = round(len(data) / 100)
-        else:
-            start_from_page = 1
+        if not ignore_code_file:
+            if os.path.exists("card_codes.json"):
+                with open('card_codes.json') as json_file:
+                    data = json.load(json_file)
+                start_from_page = round(len(data) / 100)
+            else:
+                start_from_page = 1
 
-        self.codes = self.get_all_codes(data=data, start_from_page=start_from_page)
+            self.codes = self.get_all_codes(data=data, start_from_page=start_from_page)
 
-        with open('card_codes.json', 'w') as convert_file:
-            convert_file.write(json.dumps(self.codes, indent=4))
+            with open('card_codes.json', 'w') as convert_file:
+                convert_file.write(json.dumps(self.codes, indent=4))
 
-        self.code_list = list(dict.fromkeys([c["name"].split("-")[0] for c in self.codes]))
+            self.code_list = list(dict.fromkeys([c["name"].split("-")[0] for c in self.codes]))
         self.base_url = "https://ygomarketcr.com"
         self.wp_username = "gvegaq86@gmail.com"
         self.wp_password = "Cyberdragon78%"
@@ -114,7 +115,12 @@ class WCAPIUtils:
 
         products = sorted(products, key=lambda item: hasattr(item, "tags") and str(item["tags"]))
 
-        return products[0] if products else None
+        if products:
+            for i in products:
+                if i['tags'] is [] or ('jcg' not in str(i['tags']) and 'gvq' not in str(i['tags'])):
+                    return i
+        else:
+            return None
 
     def get_products_by_code_id(self, id, page=1, per_page=100):
         return self.wcapi.get(f"products?attribute=pa_codigo&attribute_term={id}", params={"per_page": per_page,
@@ -187,7 +193,7 @@ class WCAPIUtils:
     def delete_image(self, id):
         end_point_url_img = f'{self.base_url}/wp-json/wp/v2/media/{id}'
 
-        response = requests.delete(url=end_point_url_img, params={"force": False}, auth=(self.wp_username,
+        response = requests.delete(url=end_point_url_img, params={"force": True}, auth=(self.wp_username,
                                                                                         self.wp_password))
         response = response.json()
         return response

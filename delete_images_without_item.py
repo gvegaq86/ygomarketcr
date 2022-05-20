@@ -1,19 +1,14 @@
-import sys
 from time import sleep
+
 from helper.tcgplayer_utils import TCGPlayerUtils
 from helper.tyt_utils import TYTUtils
+import sys
+
 from helper.utils import Utils
 from helper.wcapi_utils import WCAPIUtils
-import argparse
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--ignore_commons_low_price_cards', action='store')
-
-args = parser.parse_args()
-ignore_commons_low_price_cards = eval(args.ignore_commons_low_price_cards.title())
 
 sys.stdout.flush()
-wcapi = WCAPIUtils(ignore_code_file=True)
+wcapi = WCAPIUtils()
 found_card_list = []
 oos_card_list = []
 not_found_card_list = []
@@ -21,16 +16,13 @@ utils = Utils()
 
 # Get All the Products
 products = wcapi.get_all_products()
-#products = [wcapi.get_products_by_id(id=6029)]
+# products = [wcapi.get_products_by_id(id=9670)]
 tyt = TYTUtils()
 tcgp = TCGPlayerUtils()
 
 for product in products:
     try:
-        if (not (list(filter(lambda x: x['name'] == 'Rareza', product['attributes']))[0]['options'][0] == 'Common' and
-         product['price'] == '300') if ignore_commons_low_price_cards else True) and \
-                'exclude' not in str(product['tags']) and product['stock_quantity'] \
-                and product['stock_quantity'] > 0:
+        if 'exclude' not in str(product['tags']) and product['stock_quantity'] and product['stock_quantity'] > 0:
             condition = product["attributes"][4]["options"][0].split(" ")[0]
 
             if condition in ("NM", "LP"):
@@ -47,24 +39,19 @@ for product in products:
                     rounded_price = tyt.get_rounded_price(card_found[0]["price"])
                     seller = card_found[0]["seller"]
 
-                    # In case the rarity is not 'common'
-                    if rarity not in ["Common"] and rounded_price == "300":
-                        rounded_price = "500"
-
                     if current_price != rounded_price and not (len(code) == 7 and language != "English"):
                         data = {
                             "regular_price": rounded_price
                         }
                         differencia = int(rounded_price) - int(current_price)
-                        print(
-                            f"Se va a actualizar {code}, condicion: {condition}, edicion: {edition}, rareza: {rarity}, " \
-                            f"precio_anterior: {current_price}, precio_nuevo: {rounded_price}, "
-                            f"diferencia: {differencia}" +
-                            (" ***NO T&T***" if seller != "TrollAndToad Com" else ""))
+                        print(f"Se va a actualizar {code}, condicion: {condition}, edicion: {edition}, rareza: {rarity}, " \
+                              f"precio_anterior: {current_price}, precio_nuevo: {rounded_price}, "
+                              f"diferencia: {differencia}" +
+                              (" ***NO T&T***" if seller != "TrollAndToad Com" else ""))
 
                         message = {"codigo": code, "condicion": condition, "edicion": edition, "rareza": rarity,
                                    "precio_anterior": current_price, "precio_actualizado": rounded_price,
-                                   "diferencia": differencia, "seller": seller}
+                                   "diferencia": differencia,  "seller": seller}
 
                         found_card_list.append(message)
                         wcapi.update_product(product["id"], data)

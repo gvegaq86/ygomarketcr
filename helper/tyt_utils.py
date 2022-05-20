@@ -147,7 +147,7 @@ class TYTUtils:
         if full_results_message:
             print("Emailing results...")
             # send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com"],
-            send_mail("ygomarketcr@gmail.com", ["gvegaq86@gmail.com", "juangamboa16201@gmail.com"],
+            send_mail("admin@ygomarketcr.com", ["gvegaq86@gmail.com", "juangamboa16201@gmail.com"],
                       "Resumen de Precios a actualizar - YgoMarketCR", full_results_message)
 
     def get_card_info(self, set_code, edition, condition, language="English", rarity=None, hide_oos=False):
