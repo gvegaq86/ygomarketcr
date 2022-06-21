@@ -449,7 +449,33 @@ class Utils:
 
 def send_mail(FROM, TO, SUBJECT, TEXT):
     try:
-        yag = yagmail.SMTP(FROM, 'Cyberdragon78%')
-        yag.send(TO, SUBJECT, TEXT)
+
+        import smtplib
+        from email.message import EmailMessage
+
+        msg = EmailMessage()
+
+        my_address = "gvegaq86@gmail.com"  # sender address
+
+        app_generated_password = "wybpfesogwimqxko"  # gmail generated password
+
+        msg["Subject"] = SUBJECT  # email subject
+
+        msg["From"] = FROM  # sender address
+
+        msg["To"] = TO  # reciver address
+
+        msg.set_content(TEXT)  # message body
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+
+            smtp.login(my_address, app_generated_password)  # login gmail account
+
+            print("sending mail")
+            smtp.send_message(msg)  # send message
+            print("mail has sent")
+
+        #yag = yagmail.SMTP(FROM, 'Cyberdragon78%')
+        #yag.send(TO, SUBJECT, TEXT)
     except Exception as e:
         print(f"Ocurredthe following error sending email: {e}")

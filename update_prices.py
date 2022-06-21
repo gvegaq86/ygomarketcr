@@ -20,8 +20,8 @@ not_found_card_list = []
 utils = Utils()
 
 # Get All the Products
-products = wcapi.get_all_products()
-#products = [wcapi.get_products_by_id(id=6029)]
+#products = wcapi.get_all_products()
+products = [wcapi.get_products_by_id(id=33013)]
 tyt = TYTUtils()
 tcgp = TCGPlayerUtils()
 

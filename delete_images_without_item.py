@@ -1,82 +1,43 @@
-from time import sleep
-
-from helper.tcgplayer_utils import TCGPlayerUtils
-from helper.tyt_utils import TYTUtils
-import sys
-
+from helper.tyt_utils_old import TYTUtils
 from helper.utils import Utils
+from openpyxl import load_workbook
 from helper.wcapi_utils import WCAPIUtils
-
-sys.stdout.flush()
 wcapi = WCAPIUtils()
-found_card_list = []
-oos_card_list = []
-not_found_card_list = []
+
 utils = Utils()
+tyt = TYTUtils(exchange_rate=585)
 
-# Get All the Products
-products = wcapi.get_all_products()
-# products = [wcapi.get_products_by_id(id=9670)]
-tyt = TYTUtils()
-tcgp = TCGPlayerUtils()
 
-for product in products:
-    try:
-        if 'exclude' not in str(product['tags']) and product['stock_quantity'] and product['stock_quantity'] > 0:
-            condition = product["attributes"][4]["options"][0].split(" ")[0]
+loc = ("/Users/giovanni.vega/Desktop/inventory_images.xlsx")
+wb = load_workbook(loc)
+ws = wb['Sheet1']
+ws['A1'] = 'A1'
 
-            if condition in ("NM", "LP"):
-                rounded_price = 0
-                code = product["attributes"][0]["options"][0]
-                edition = product["attributes"][1]["options"][0]
-                rarity = product["attributes"][3]["options"][0]
-                language = product["attributes"][6]["options"][0]
-                current_price = product["regular_price"]
-                card_found, oos_card, not_found_card = tyt.get_card_info(set_code=code, edition=edition,
-                                                                         condition=condition, hide_oos=False,
-                                                                         rarity=rarity)
-                if card_found:
-                    rounded_price = tyt.get_rounded_price(card_found[0]["price"])
-                    seller = card_found[0]["seller"]
+ws_inventory_images = ws
 
-                    if current_price != rounded_price and not (len(code) == 7 and language != "English"):
-                        data = {
-                            "regular_price": rounded_price
-                        }
-                        differencia = int(rounded_price) - int(current_price)
-                        print(f"Se va a actualizar {code}, condicion: {condition}, edicion: {edition}, rareza: {rarity}, " \
-                              f"precio_anterior: {current_price}, precio_nuevo: {rounded_price}, "
-                              f"diferencia: {differencia}" +
-                              (" ***NO T&T***" if seller != "TrollAndToad Com" else ""))
 
-                        message = {"codigo": code, "condicion": condition, "edicion": edition, "rareza": rarity,
-                                   "precio_anterior": current_price, "precio_actualizado": rounded_price,
-                                   "diferencia": differencia,  "seller": seller}
+def find_url(url_to_look):
+    rows = int(ws_inventory_images.max_row)
 
-                        found_card_list.append(message)
-                        wcapi.update_product(product["id"], data)
-                    else:
-                        print("Current price matches with T&T")
-                elif oos_card:
-                    seller = oos_card[0]["seller"]
+    for i in range(0, rows - 1):
+        url = ws_inventory_images[i + 2][0].value
 
-                    rounded_price = tyt.get_rounded_price(oos_card[0]["price"])
+        if url_to_look == url:
+            return True
+    return False
 
-                    card = {"codigo": code, "condicion": oos_card[0]["condition"], "edicion": edition,
-                            "rareza": oos_card[0]["rarity"], "precio_anterior": current_price, "precio_actualizado":
-                                rounded_price, "diferencia": int(rounded_price) - int(current_price), "seller": seller}
+# Give the location of the file
+loc = ("/Users/giovanni.vega/Desktop/media_files.xlsx")
 
-                    oos_card_list.append(card)
-                elif not_found_card:
-                    card = {"codigo": code, "condicion": not_found_card[0].condition,
-                            "edicion": not_found_card[0].edition,
-                            "rareza": not_found_card[0].rarity, "precio_tienda": current_price}
+wb = load_workbook(loc)
+ws = wb['Sheet1']
+ws['A1'] = 'A1'
 
-                    not_found_card_list.append(card)
-                print(f"{len(not_found_card_list) + len(oos_card_list) + len(found_card_list)} cards processed")
-                sleep(5)
-    except Exception as e:
-        print(f"Ocurrio un problema procesando el item: {product}")
-        pass
-# Send results by email
-tyt.send_results(found_card_list, oos_card_list, not_found_card_list)
+rows = int(ws.max_row)
+
+for i in range(0, rows-1):
+    url = ws[i + 2][1].value
+
+    if find_url(url):
+        wcapi.delete_image(id=ws[i + 2][0].value)
+
