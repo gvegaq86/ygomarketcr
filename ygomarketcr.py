@@ -978,6 +978,10 @@ class MainApp(QMainWindow):
             if info and info[0]:
                 self.avanzado.setChecked(True)
                 precio = tyt.get_rounded_price(info[0][0]["price"])
+
+                # In case the rarity is not 'common'
+                if rarity not in ["Common"] and precio == "300":
+                    precio = "500"
                 image_url = info[0][0]["image"]
                 nombre = info[0][0]["card_name"]
                 self.stock.setText("1")

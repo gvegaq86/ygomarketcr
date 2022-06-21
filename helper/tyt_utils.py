@@ -178,6 +178,8 @@ class TYTUtils:
                                 displayed_edition = "Limited Edition"
                             elif "LCJW" in card_text:
                                 displayed_edition = "Unlimited"
+                            elif "Limited Edition" in card_text:
+                                displayed_edition = "Limited Edition"
                             elif "1st Edition" in card_text or "1st Edition" in e:
                                 displayed_edition = "1st Edition"
                             elif "Unlimited" in card_text or "Unlimited" in e:
