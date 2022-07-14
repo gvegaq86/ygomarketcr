@@ -65,17 +65,33 @@ class MainApp(QMainWindow):
         self.card_code_label = QLabel(self)
         self.card_code_label.setStyleSheet("color: #98c379;")
         self.card_code_label.setText("Código de carta")
-        self.card_code = QLineEdit(self)
-        self.card_code.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); font: 15px;")
-        self.card_code.setPlaceholderText("Código")
-        self.card_code.setValidator(Validator(self))
+        self.card_code1 = QLineEdit(self)
+        self.card_code1.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); font: 15px;")
+        #self.card_code1.setPlaceholderText("Código")
+        self.card_code1.setValidator(Validator(self))
         self.card_code_label.setGeometry(10, 10, 100, 10)
-        self.card_code.setGeometry(10, 25, 95, 30)
-        self.card_code.setMaxLength(10)
-        self.card_code.textEdited.connect(self.update_card_code)
-        self.card_code.setCompleter(completer)
-        self.card_code.returnPressed.connect(self.slot_load)
-        self.card_code.setAlignment(Qt.AlignCenter)
+        self.card_code1.setGeometry(10, 25, 40, 35)
+        self.card_code1.setMaxLength(5)
+        self.card_code1.textEdited.connect(self.update_card_code)
+        self.card_code1.setCompleter(completer)
+        self.card_code1.returnPressed.connect(self.slot_load)
+        self.card_code1.setAlignment(Qt.AlignCenter)
+
+        self.dash_label = QLabel(self)
+        self.dash_label.setStyleSheet("color: #98c379;")
+        self.dash_label.setText('-')
+        self.dash_label.setGeometry(52, 25, 5, 40)
+
+        self.card_code2 = QLineEdit(self)
+        self.card_code2.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); font: 15px;")
+        self.card_code2.setValidator(Validator(self))
+        self.card_code2.setGeometry(60, 25, 50, 35)
+        self.card_code2.setMaxLength(6)
+        self.card_code2.textEdited.connect(self.update_card_code)
+        #self.card_code2.setCompleter(completer)
+        self.card_code2.returnPressed.connect(self.slot_load)
+        self.card_code2.cursorPositionChanged.connect(self.test)
+        self.card_code2.setAlignment(Qt.AlignCenter)
 
         # Agregar "EN" checkbox
         self.frame00 = QFrame(self)
@@ -129,6 +145,22 @@ class MainApp(QMainWindow):
         self.next_image.clicked.connect(self.slot_next_image)
         self.next_image.setGeometry(445, 400, 160, 30)
 
+        # Consultar en ygomarketcr
+        self.ask_ymktcr = QPushButton("", self)
+        self.ask_ymktcr.setStyleSheet(":enabled { color: black"
+                                   + "; background-color: white"
+                                   + "; border-color: black"
+                                   + " } :hover { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: lightgray"
+                                   + " } :disabled { color: black"
+                                   + "; border-color: black"
+                                   + "; background-color: gray" + " }")
+        self.ask_ymktcr.setIcon(QIcon(resource_path("images/ygomarketcr.jpeg")))
+        self.ask_ymktcr.setIconSize(QtCore.QSize(70, 70))
+        self.ask_ymktcr.clicked.connect(self.go_ymkcr)
+        self.ask_ymktcr.setGeometry(325, 440, 80, 50)
+
         # Consultar en T&T
         self.ask_tyt = QPushButton("", self)
         self.ask_tyt.setStyleSheet(":enabled { color: black"
@@ -143,7 +175,7 @@ class MainApp(QMainWindow):
         self.ask_tyt.setIcon(QIcon(resource_path("images/trollandtoad.com.jpg")))
         self.ask_tyt.setIconSize(QtCore.QSize(70, 70))
         self.ask_tyt.clicked.connect(self.go_tyt)
-        self.ask_tyt.setGeometry(325, 440, 80, 50)
+        self.ask_tyt.setGeometry(240, 440, 80, 50)
 
         # Consultar en TCGPlayer
         self.ask_tcgp = QPushButton("", self)
@@ -297,14 +329,44 @@ class MainApp(QMainWindow):
         self.stock.setGeometry(10, 285, 40, 30)
         self.stock.setText("0")
 
+        # up/down buttons
+        self.up_button = QPushButton("", self)
+        self.down_button = QPushButton("", self)
+        self.up_button.setGeometry(55, 285, 15, 15)
+        self.up_button.setText("+")
+        self.down_button.setGeometry(55, 300, 15, 15)
+        self.down_button.setText("-")
+        self.up_button.clicked.connect(self.increase_stock)
+        self.down_button.clicked.connect(self.decrease_stock)
+
+        self.up_button.setStyleSheet(":enabled { color: black"
+                                     + "; background-color: white"
+                                     + "; border-color: black"
+                                     + " } :hover { color: black"
+                                     + "; border-color: black"
+                                     + "; background-color: lightgray"
+                                     + " } :disabled { color: black"
+                                     + "; border-color: black"
+                                     + "; background-color: gray" + " }")
+
+        self.down_button.setStyleSheet(":enabled { color: black"
+                                       + "; background-color: white"
+                                       + "; border-color: black"
+                                       + " } :hover { color: black"
+                                       + "; border-color: black"
+                                       + "; background-color: lightgray"
+                                       + " } :disabled { color: black"
+                                       + "; border-color: black"
+                                       + "; background-color: gray" + " }")
+
         # Prize
         self.prize = QLineEdit(self)
         self.prize.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8);")
         self.prize_label = QLabel(self)
         self.prize_label.setStyleSheet("color: #98c379;")
         self.prize_label.setText("Precio")
-        self.prize_label.setGeometry(60, 270, 80, 10)
-        self.prize.setGeometry(60, 285, 80, 30)
+        self.prize_label.setGeometry(80, 270, 80, 10)
+        self.prize.setGeometry(80, 285, 80, 30)
         self.prize.setText("0")
         self.prize.setValidator(QDoubleValidator(self))
         self.prize.setInputMask("₡0000000")
@@ -317,8 +379,9 @@ class MainApp(QMainWindow):
         self.card_type.setStyleSheet("color: black; background-color: hsla(0,0%,100%,0.8); "
                                      "selection-background-color: lightgray;")
         self.card_type.addItems(card_type_terms)
-        self.card_type_label.setGeometry(150, 270, 180, 10)
-        self.card_type.setGeometry(150, 285, 100, 30)
+        self.card_type_label.setGeometry(170, 270, 180, 10)
+        self.card_type.setGeometry(170, 285, 100, 30)
+        self.card_type.currentIndexChanged.connect(self.card_type_changed)
 
         # Categorias
         self.categories_label = QLabel(self)
@@ -352,6 +415,7 @@ class MainApp(QMainWindow):
         self.frame4.setGeometry(130, 350, 100, 100)
         self.goat = QCheckBox("goat", self.frame4)
         self.goat.setStyleSheet("color: white;")
+        self.goat.clicked.connect(self.set_old_school)
 
         self.frame5 = QFrame(self)
         self.frame5.setGeometry(130, 370, 100, 100)
@@ -422,38 +486,45 @@ class MainApp(QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress:
-            if event.key() == 45:
+            if event.key() == 45 or event.key() == 16777217:
                 self.dash_was_pressed = True
+                if event.key() == 16777217:
+                    self.update_card_code(event)
             else:
                 self.dash_was_pressed = False
 
         return super(QWidget, self).eventFilter(obj, event)
 
     def update_card_code(self, event):
-        if self.add_en_checkbox.checkState() and self.card_code.text() and \
-                self.dash_was_pressed and self.card_code.text()[-1] == "-":
-            self.card_code.setText(self.card_code.text() + "EN0")
+        if self.add_en_checkbox.checkState() and self.card_code1.text() and \
+                self.dash_was_pressed and ("-" in self.card_code1.text() or event.key() == 16777217):
+            self.card_code1.setText(self.card_code1.text().replace("-", ""))
+            self.card_code2.setText("EN0")
+            self.card_code2.setFocus()
         self.card_name.setText("")
+        if len(event) > 5 and "EN0" in event:
+            self.card_code2.setText(event.replace("EN0", "EN"))
         self.update_name(event)
 
     def language_combo_select(self):
-        text = f"{self.card_code.text()} {self.card_name.text()} - {self.edition.currentText()} - " \
+        card_code_text = self.card_code1.text() + '-' + self.card_code2.text()
+        text = f"{card_code_text} {self.card_name.text()} - {self.edition.currentText()} - " \
                f"{self.condition.currentText()} - {self.rarity.currentText()}"
 
         if self.languages_combo.currentText() == "Spanish":
-            text = text + f" (SPANISH{' ' + self.card_code.text().replace('EN', 'SP') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (SPANISH{' ' + card_code_text.replace('EN', 'SP') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Italian":
-            text = text + f" (ITALIAN{' ' + self.card_code.text().replace('EN', 'IT') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (ITALIAN{' ' + card_code_text.replace('EN', 'IT') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Korean":
-            text = text + f" (KOREAN{' ' + self.card_code.text().replace('EN', 'KR') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (KOREAN{' ' + card_code_text.replace('EN', 'KR') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Japanese":
-            text = text + f" (JAPANESE{' ' + self.card_code.text().replace('EN', 'JP') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (JAPANESE{' ' + card_code_text.replace('EN', 'JP') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Portuguese":
-            text = text + f" (PORTUGUESE{' ' + self.card_code.text().replace('EN', 'PT') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (PORTUGUESE{' ' + card_code_text.replace('EN', 'PT') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "German":
-            text = text + f" (GERMAN{' ' + self.card_code.text().replace('EN', 'DE') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (GERMAN{' ' + card_code_text.replace('EN', 'DE') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "French":
-            text = text + f" (FRENCH{' ' + self.card_code.text().replace('EN', 'FR') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (FRENCH{' ' + card_code_text.replace('EN', 'FR') if '-EN' in card_code_text else ''})"
 
         self.item_name.setText(text)
 
@@ -467,7 +538,7 @@ class MainApp(QMainWindow):
                 self.old_school.setChecked(True)
             if o == "jcg":
                 self.jcg.setChecked(True)
-                #self.display_dialog("La carta pertenece a Juan Carlos, se se requiere actualizar la cantidad de items, "
+                # self.display_dialog("La carta pertenece a Juan Carlos, se se requiere actualizar la cantidad de items, "
                 #                    "debera ingresarse directamente en Woocommerce como un item completamente nuevo.")
             if o == "goat":
                 self.goat.setChecked(True)
@@ -497,22 +568,24 @@ class MainApp(QMainWindow):
         return tags
 
     def update_name(self, event):
-        text = f"{self.card_code.text()} {self.card_name.text()} - {self.edition.currentText()} - " \
+        card_code_text = self.card_code1.text() + '-' + self.card_code2.text()
+
+        text = f"{card_code_text} {self.card_name.text()} - {self.edition.currentText()} - " \
                f"{self.condition.currentText()} - {self.rarity.currentText()}"
         if self.languages_combo.currentText() == "Spanish":
-            text = text + f" (SPANISH{' ' + self.card_code.text().replace('EN', 'SP') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (SPANISH{' ' + card_code_text.replace('EN', 'SP') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Italian":
-            text = text + f" (ITALIAN{' ' + self.card_code.text().replace('EN', 'IT') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (ITALIAN{' ' + card_code_text.replace('EN', 'IT') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Korean":
-            text = text + f" (KOREAN{' ' + self.card_code.text().replace('EN', 'KR') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (KOREAN{' ' + card_code_text.replace('EN', 'KR') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Japanese":
-            text = text + f" (JAPANESE{' ' + self.card_code.text().replace('EN', 'JP') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (JAPANESE{' ' + card_code_text.replace('EN', 'JP') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "Portuguese":
-            text = text + f" (PORTUGUESE{' ' + self.card_code.text().replace('EN', 'PT') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (PORTUGUESE{' ' + card_code_text.replace('EN', 'PT') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "German":
-            text = text + f" (GERMAN{' ' + self.card_code.text().replace('EN', 'DE') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (GERMAN{' ' + card_code_text.replace('EN', 'DE') if '-EN' in card_code_text else ''})"
         elif self.languages_combo.currentText() == "French":
-            text = text + f" (FRENCH{' ' + self.card_code.text().replace('EN', 'FR') if '-EN' in self.card_code.text() else ''})"
+            text = text + f" (FRENCH{' ' + card_code_text.replace('EN', 'FR') if '-EN' in card_code_text else ''})"
 
         self.item_name.setText(text)
 
@@ -538,8 +611,13 @@ class MainApp(QMainWindow):
             self.card_name.setText(self.item_info["name"])
             self.slot_load()
 
+    def set_old_school(self):
+        if self.goat.checkState():
+            self.old_school.setChecked(True)
+
     def clear_form(self):
-        self.card_code.clear()
+        self.card_code1.clear()
+        self.card_code2.clear()
         self.card_type.setCurrentText("")
         self.condition.setCurrentText("NM")
         self.edition.setCurrentText("1st Edition")
@@ -550,14 +628,19 @@ class MainApp(QMainWindow):
         self.insert_button.setDisabled(True)
         self.update_button.setDisabled(True)
         self.delete_button.setDisabled(True)
-        self.card_code.setFocus()
+        self.card_code1.setFocus()
         self.id = ""
         self.image_path = ""
         self.image.clear()
         self.last_update_label.setText("")
         self.languages_combo.setCurrentText("English")
-        self.item_name.setText(f"{self.card_code.text()} - {self.edition.currentText()} - "
+        card_code_text = self.card_code1.text() + '-' + self.card_code2.text()
+        self.item_name.setText(f"{card_code_text} - {self.edition.currentText()} - "
                                f"{self.condition.currentText()} - {self.rarity.currentText()}")
+
+    def card_type_changed(self):
+        self.stock.setFocus()
+        self.stock.selectAll()
 
     def slot_update(self):
         try:
@@ -584,6 +667,8 @@ class MainApp(QMainWindow):
                 t = list(filter(lambda x: x["name"] == cat, self.categories_terms))[0]
                 categories.append({'id': t["id"], 'name': t["name"], 'slug': t["slug"]})
 
+            card_code_text = self.card_code1.text() + '-' + self.card_code2.text()
+
             data = {
                 "attributes": [
                     {
@@ -593,7 +678,7 @@ class MainApp(QMainWindow):
                         "visible": True,
                         "variation": False,
                         "options": [
-                            self.card_code.text()
+                            card_code_text
                         ]
                     },
                     {
@@ -613,7 +698,7 @@ class MainApp(QMainWindow):
                         "visible": True,
                         "variation": False,
                         "options": [
-                            self.card_code.text().split("-")[0]
+                            card_code_text.split("-")[0]
                         ]
                     },
                     {
@@ -674,7 +759,7 @@ class MainApp(QMainWindow):
                 data["images"] = [{"src": image_url, "position": 0}]
 
             wcapi.update_product(id=self.id, data=data)
-            #self.display_dialog(f"La carta '{self.item_name.text()}' ha sido actualizada correctamente.")
+            # self.display_dialog(f"La carta '{self.item_name.text()}' ha sido actualizada correctamente.")
         except Exception as e:
             self.display_dialog(f"Ocurrio el siguiente error actualizando la carta '{self.item_name.text()}' del "
                                 f"inventario: {str(e)}.")
@@ -701,8 +786,22 @@ class MainApp(QMainWindow):
             self.image.show()
         self.image_path = file_name
 
+    def go_ymkcr(self):
+        if self.card_code1.text() != "" and self.card_code2.text() != "" and self.card_name.text() != "":
+            item_name = self.item_name.text().replace(" - ", "-").lower().replace(" ", "-").lower()
+            link = f'https://ygomarketcr.com/product/{item_name}'
+
+            if platform.system() != "Windows":
+                os.system(f'open -a "Google Chrome" "{link}"')
+            else:
+                os.system(f'start "chrome" "{link}"')
+        else:
+            self.display_dialog("Algunos datos hacen falta")
+            self.card_code1.setFocus()
+
     def go_tyt(self):
-        if self.card_code.text() != "":
+        card_code_text = self.card_code1.text() + '-' + self.card_code2.text()
+        if card_code_text != "":
             edition = self.edition.currentText()
             if edition == "Unlimited":
                 edition = "+"
@@ -711,7 +810,7 @@ class MainApp(QMainWindow):
 
             link = f'https://www.trollandtoad.com/yugioh/all-yu-gi-oh-singles/7087?sort-order=L-H&item-condition=' \
                    f'{"NM" if self.condition.currentText() == "NM" else "PL"}&search-words=' \
-                   f'{self.card_code.text()}+{self.card_name.text().replace(" ", "+")}+' \
+                   f'{card_code_text}+{self.card_name.text().replace(" ", "+")}+' \
                    f'{edition}+{self.rarity.currentText().replace(" ", "+")}'
 
             if platform.system() != "Windows":
@@ -720,12 +819,13 @@ class MainApp(QMainWindow):
                 os.system(f'start "chrome" "{link}"')
         else:
             self.display_dialog("El codigo de la carta debe ser ingresado.")
-            self.card_code.setFocus()
+            self.card_code1.setFocus()
 
     def go_ebay(self):
-        if self.card_code.text() != "":
+        card_code_text = self.card_code1.text() + '-' + self.card_code2.text()
+        if card_code_text != "":
             link = f'https://www.ebay.com/sch/i.html?_from=R40&_nkw=' \
-                   f'{self.card_code.text()}+{self.card_name.text().replace(" ", "+")}+' \
+                   f'{card_code_text}+{self.card_name.text().replace(" ", "+")}+' \
                    f'{self.rarity.currentText().replace(" ", "+")}+{self.rarity.currentText().replace(" ", "+")}' \
                    f'&_sacat=183454&LH_TitleDesc=0&LH_BIN=1&_sop=15'
             if platform.system() != "Windows":
@@ -734,7 +834,7 @@ class MainApp(QMainWindow):
                 os.system(f'start "chrome" "{link}"')
         else:
             self.display_dialog("El codigo de la carta debe ser ingresado.")
-            self.card_code.setFocus()
+            self.card_code1.setFocus()
 
     def go_tcgp(self):
         if self.card_name.text() != "":
@@ -792,8 +892,13 @@ class MainApp(QMainWindow):
             self.image_path = ""
             self.image.clear()
 
+    def test(self):
+        pass
+
     def slot_insert(self):
         try:
+            card_code_text = self.card_code1.text() + '-' + self.card_code2.text()
+
             if self.card_name.text() == "":
                 self.display_dialog("El nombre de la carta no puede estar en blanco.")
                 self.card_name.setFocus()
@@ -826,17 +931,27 @@ class MainApp(QMainWindow):
                 "images": im,
                 "attributes": [
                     {
-                        "id": 4,
+                        "id": 3,
                         "name": "Código",
                         "position": 0,
                         "visible": True,
                         "variation": False,
                         "options": [
-                            self.card_code.text()
+                            card_code_text
                         ]
                     },
                     {
-                        "id": 6,
+                        "id": 5,
+                        "name": "Expansión",
+                        "position": 2,
+                        "visible": True,
+                        "variation": False,
+                        "options": [
+                            card_code_text.split("-")[0]
+                        ]
+                    },
+                    {
+                        "id": 4,
                         "name": "Edición",
                         "position": 1,
                         "visible": True,
@@ -846,17 +961,7 @@ class MainApp(QMainWindow):
                         ]
                     },
                     {
-                        "id": 7,
-                        "name": "Expansión",
-                        "position": 2,
-                        "visible": True,
-                        "variation": False,
-                        "options": [
-                            self.card_code.text().split("-")[0]
-                        ]
-                    },
-                    {
-                        "id": 5,
+                        "id": 6,
                         "name": "Rareza",
                         "position": 3,
                         "visible": True,
@@ -876,7 +981,7 @@ class MainApp(QMainWindow):
                         ]
                     },
                     {
-                        "id": 8,
+                        "id": 7,
                         "name": "Tipo",
                         "position": 5,
                         "visible": True,
@@ -886,7 +991,7 @@ class MainApp(QMainWindow):
                         ]
                     },
                     {
-                        "id": 9,
+                        "id": 8,
                         "name": "Idioma",
                         "position": 6,
                         "visible": True,
@@ -903,7 +1008,7 @@ class MainApp(QMainWindow):
             }
 
             response = wcapi.insert_product(data=data)
-            cc = list(filter(lambda x: x["name"] == self.card_code.text(),
+            cc = list(filter(lambda x: x["name"] == card_code_text,
                              wcapi.get_codes(page=1, per_page=10, order_by="id")))
 
             if cc:
@@ -932,12 +1037,35 @@ class MainApp(QMainWindow):
         self.gvq.setChecked(False)
         self.goat.setChecked(False)
 
+    def increase_stock(self):
+        stock = self.stock.text()
+
+        if stock == "":
+            stock = 0
+        else:
+            stock = int(stock)
+
+        self.stock.setText(str(stock + 1))
+
+    def decrease_stock(self):
+        stock = self.stock.text()
+
+        if stock == "":
+            stock = 0
+        else:
+            stock = int(stock)
+
+        if int(self.stock.text()) > 0:
+            self.stock.setText(str(stock + - 1))
+        else:
+            self.stock.setText(str(0))
+
     def slot_load(self):
         self.reset_checkboxes()
         self.id = ""
         message = ""
         image_url = ""
-        code = self.card_code.text()
+        code = self.card_code1.text() + '-' + self.card_code2.text()
         condition = self.condition.currentText()
         edition = self.edition.currentText()
         rarity = self.rarity.currentText()
@@ -1009,7 +1137,7 @@ class MainApp(QMainWindow):
             # self.item_name.setText(f"{code}  - {edition} - {condition} - {rarity}")
             self.prize.setText("500")
             self.image.clear()
-            #self.item_info = utils.get_card_info_from_set_code(code)
+            # self.item_info = utils.get_card_info_from_set_code(code)
             self.item_info = None
             response = False
             if self.item_info and self.card_name.text() != self.item_info['name'] and \
@@ -1025,7 +1153,7 @@ class MainApp(QMainWindow):
                 self.update_button.setDisabled(True)
                 self.delete_button.setDisabled(True)
                 self.card_type.setCurrentText("")
-                #self.display_dialog(f"La carta '{self.item_name.text()}' no existe en el inventario ni en T&T.")
+                # self.display_dialog(f"La carta '{self.item_name.text()}' no existe en el inventario ni en T&T.")
                 self.card_type.showPopup()
 
 

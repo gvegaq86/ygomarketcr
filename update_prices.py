@@ -21,7 +21,7 @@ utils = Utils()
 
 # Get All the Products
 products = wcapi.get_all_products()
-# products = [wcapi.get_products_by_id(id=33013)]
+#products = [wcapi.get_products_by_id(id=26674)]
 tyt = TYTUtils()
 tcgp = TCGPlayerUtils()
 

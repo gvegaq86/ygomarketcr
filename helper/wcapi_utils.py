@@ -7,8 +7,8 @@ import json
 
 
 class WCAPIUtils:
-    def __init__(self, consumer_key="ck_0d88e046fbbacea08525bbf74f77cfd5794ada29",
-                 consumer_secret="cs_683c187a8a5a809e7753a74cd4daf57514986165", ignore_code_file=False):
+    def __init__(self, consumer_key="ck_dc6397ade26ea08bd5c0c69cbcba748bea7c8504",
+                 consumer_secret="cs_85b9b0ed19d1f545560e0e11023ea99c2f548b47", ignore_code_file=False):
         self.wcapi = API(
             url="https://ygomarketcr.com",
             consumer_key=consumer_key,
@@ -52,7 +52,7 @@ class WCAPIUtils:
         if order_by:
             params["orderby"] = order_by
 
-        return self.wcapi.get("products/attributes/4/terms", params=params).json()
+        return self.wcapi.get("products/attributes/3/terms", params=params).json()
 
     def get_all_codes(self, data=None, start_from_page=1):
 
@@ -127,22 +127,22 @@ class WCAPIUtils:
                                                                                            "page": page}).json()
 
     def get_rarity_terms(self, page=1, per_page=100):
-        results = self.wcapi.get(f"products/attributes/5/terms", params={"per_page": per_page, "page": page}).json()
-        results = sorted(results, key=lambda x: x["name"])
-        return [r["name"] for r in results]
-
-    def get_edition_terms(self, page=1, per_page=100):
         results = self.wcapi.get(f"products/attributes/6/terms", params={"per_page": per_page, "page": page}).json()
         results = sorted(results, key=lambda x: x["name"])
         return [r["name"] for r in results]
 
+    def get_edition_terms(self, page=1, per_page=100):
+        results = self.wcapi.get(f"products/attributes/4/terms", params={"per_page": per_page, "page": page}).json()
+        results = sorted(results, key=lambda x: x["name"])
+        return [r["name"] for r in results]
+
     def get_condition_terms(self, page=1, per_page=100):
-        results = self.wcapi.get(f"products/attributes/3/terms", params={"per_page": per_page, "page": page}).json()
+        results = self.wcapi.get(f"products/attributes/9/terms", params={"per_page": per_page, "page": page}).json()
         results = sorted(results, key=lambda x: x["name"])
         return list(set([r["name"].split(" ")[-1].replace("(", "").replace(")", "") for r in results]))
 
     def get_card_type_terms(self, page=1, per_page=100):
-        results = self.wcapi.get(f"products/attributes/8/terms", params={"per_page": per_page, "page": page}).json()
+        results = self.wcapi.get(f"products/attributes/7/terms", params={"per_page": per_page, "page": page}).json()
         results = sorted(results, key=lambda x: x["name"])
         return list(set([r["name"].split(" ")[-1].replace("(", "").replace(")", "") for r in results]))
 
@@ -194,7 +194,7 @@ class WCAPIUtils:
         end_point_url_img = f'{self.base_url}/wp-json/wp/v2/media/{id}'
 
         response = requests.delete(url=end_point_url_img, params={"force": True}, auth=(self.wp_username,
-                                                                                        self.wp_password))
+                                                                                        self.wp_password), timeout=10)
         response = response.json()
         return response
 
@@ -202,7 +202,11 @@ class WCAPIUtils:
         return self.wcapi.put(f"products/{id}", data).json()
 
     def delete_product(self, id):
-        return self.wcapi.delete(f"products/{id}", params={"force": True}).json()
+        response = self.wcapi.delete(f"products/{id}", params={"force": True})
+        if not response:
+            return response
+        else:
+            return response.json()
 
     def insert_product(self, data):
         response = self.wcapi.post(f"products", data).json()
